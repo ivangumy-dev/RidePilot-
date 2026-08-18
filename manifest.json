@@ -1,0 +1,24 @@
+{
+  "name": "RidePilot",
+  "short_name": "RidePilot",
+  "description": "Fahrtenbuch, Wartung und Dokumente für deinen Roller. Offline nutzbar, alle Daten bleiben auf dem Gerät.",
+  "id": "/",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#080B0E",
+  "theme_color": "#080B0E",
+  "lang": "de-CH",
+  "dir": "ltr",
+  "categories": ["productivity", "travel", "utilities"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Fahrt erfassen", "url": "./index.html#trips", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
+    { "name": "Wartung", "url": "./index.html#maintenance", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] }
+  ]
+}

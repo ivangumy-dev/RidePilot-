@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="de-CH">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#0A0D11">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="RidePilot – Fahrtenbuch, Wartung und Dokumente für deinen Roller.">
+<link rel="manifest" href="manifest.json">
+<title>RidePilot</title>
+<style>
+/* ---------- Tokens ---------- */
+:root{
+  --volt:#00C2A3; --volt-ink:#003B32;
+  --warn:#FF9F0A; --danger:#FF453A; --ok:#30D158;
+  --r-card:22px; --r-inner:16px; --r-field:14px;
+  --tap:52px;
+  --font-display:ui-rounded,"SF Pro Rounded","Hiragino Maru Gothic ProN",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-body:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --font-data:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
+  --sat:env(safe-area-inset-top); --sab:env(safe-area-inset-bottom);
+}
+html[data-theme="light"]{
+  --bg:#EFF2F6; --surface:#FFFFFF; --surface-2:#F6F8FA;
+  --text:#0C1116; --muted:#68737F; --line:rgba(11,17,22,.10);
+  --shadow:0 1px 2px rgba(11,17,22,.05),0 8px 24px rgba(11,17,22,.06);
+}
+html[data-theme="dark"]{
+  --bg:#080B0E; --surface:#141A20; --surface-2:#1B222A;
+  --text:#EEF2F6; --muted:#8D99A7; --line:rgba(255,255,255,.10);
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{
+  background:var(--bg);color:var(--text);font-family:var(--font-body);
+  font-size:16px;line-height:1.45;overscroll-behavior-y:none;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,.display{font-family:var(--font-display);letter-spacing:-.02em;margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--volt)}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+.mono{font-family:var(--font-data);letter-spacing:.02em}
+
+/* ---------- Layout ---------- */
+#app{min-height:100%;display:flex;flex-direction:column}
+.shell{display:flex;flex:1;min-height:0}
+.side{display:none}
+.main{flex:1;min-width:0;padding:calc(var(--sat) + 8px) 16px calc(var(--sab) + 96px);max-width:920px;margin:0 auto;width:100%}
+@media(min-width:900px){
+  .shell{gap:20px;padding:0 20px}
+  .side{display:flex;flex-direction:column;gap:4px;width:236px;padding:24px 0;position:sticky;top:0;height:100vh}
+  .main{padding:24px 0 64px}
+  .tabbar{display:none}
+}
+
+/* ---------- Header ---------- */
+.topbar{display:flex;align-items:center;gap:12px;margin:6px 0 18px}
+.topbar .title{font-size:30px;font-weight:800;line-height:1.1}
+.topbar .sub{color:var(--muted);font-size:13px;margin-top:2px}
+.spacer{flex:1}
+
+/* ---------- Cards ---------- */
+.card{background:var(--surface);border-radius:var(--r-card);padding:18px;box-shadow:var(--shadow);border:1px solid var(--line)}
+.card + .card{margin-top:14px}
+.card-h{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.card-h h2{font-size:17px;font-weight:700}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.grid{display:grid;gap:14px}
+@media(min-width:620px){.grid.two{grid-template-columns:1fr 1fr}}
+
+/* ---------- Signature: Odometer strip ---------- */
+.odo{position:relative;overflow:hidden;background:linear-gradient(160deg,var(--volt) 0%,#0E9E8B 58%,#0B7F73 100%);color:#00201B;border:none}
+.odo .ticks{position:absolute;inset:auto 0 0 0;height:26px;opacity:.35;
+  background-image:repeating-linear-gradient(90deg,rgba(0,32,27,.9) 0 2px,transparent 2px 14px);}
+.odo .plate{display:inline-block;background:rgba(0,32,27,.14);border:1px solid rgba(0,32,27,.25);
+  padding:3px 10px;border-radius:8px;font-size:12px;font-weight:700}
+.odo .big{font-family:var(--font-display);font-size:clamp(44px,13vw,62px);font-weight:800;line-height:1;margin-top:10px}
+.odo .big small{font-size:.32em;font-weight:700;margin-left:6px;opacity:.7}
+.odo .row{display:flex;align-items:flex-end;gap:14px;position:relative;z-index:1}
+.odo .thumb{width:66px;height:66px;border-radius:18px;object-fit:cover;background:rgba(0,32,27,.15);flex:none}
+
+/* ---------- Lists ---------- */
+.list{background:var(--surface);border-radius:var(--r-card);border:1px solid var(--line);overflow:hidden;box-shadow:var(--shadow)}
+.row{display:flex;align-items:center;gap:14px;padding:14px 16px;min-height:var(--tap);width:100%;background:none;border:0;text-align:left;cursor:pointer}
+.row + .row{border-top:1px solid var(--line)}
+.row:active{background:var(--surface-2)}
+.row .grow{flex:1;min-width:0}
+.row .t{font-weight:600;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .s{color:var(--muted);font-size:13px;margin-top:1px}
+.row .v{color:var(--muted);font-size:14px;flex:none}
+.chev{color:var(--muted);flex:none}
+.ico{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:none;background:var(--surface-2);color:var(--muted)}
+.ico.g{background:rgba(0,194,163,.14);color:var(--volt)}
+.ico.w{background:rgba(255,159,10,.15);color:var(--warn)}
+.ico.d{background:rgba(255,69,58,.15);color:var(--danger)}
+
+/* ---------- Badges / stats ---------- */
+.badge{font-size:12px;font-weight:700;padding:4px 9px;border-radius:999px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.badge.ok{background:rgba(48,209,88,.16);color:#1B9C43}
+.badge.warn{background:rgba(255,159,10,.18);color:#B36B00}
+.badge.bad{background:rgba(255,69,58,.16);color:#D6342A}
+html[data-theme="dark"] .badge.ok{color:#5BE07E}
+html[data-theme="dark"] .badge.warn{color:#FFBE5C}
+html[data-theme="dark"] .badge.bad{color:#FF8079}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border-radius:var(--r-inner);overflow:hidden}
+.stat{background:var(--surface);padding:14px}
+.stat .k{font-size:12px;color:var(--muted);font-weight:600}
+.stat .v{font-family:var(--font-display);font-size:22px;font-weight:800;margin-top:2px}
+
+/* ---------- Buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:var(--tap);
+  padding:0 20px;border-radius:999px;border:1px solid var(--line);background:var(--surface);
+  font-weight:650;cursor:pointer;transition:transform .12s ease,filter .12s ease}
+.btn:active{transform:scale(.975)}
+.btn.p{background:var(--volt);color:var(--volt-ink);border-color:transparent}
+.btn.d{background:rgba(255,69,58,.12);color:var(--danger);border-color:transparent}
+.btn.ghost{background:var(--surface-2)}
+.btn.wide{width:100%}
+.btn.sm{min-height:40px;padding:0 14px;font-size:14px}
+.quick{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(min-width:620px){.quick{grid-template-columns:repeat(4,1fr)}}
+.qa{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:14px;border-radius:var(--r-inner);
+  background:var(--surface);border:1px solid var(--line);cursor:pointer;min-height:88px;justify-content:space-between}
+.qa:active{transform:scale(.98)}
+.qa .l{font-size:14px;font-weight:650;text-align:left}
+.fab{position:fixed;right:16px;bottom:calc(var(--sab) + 84px);z-index:40;width:58px;height:58px;border-radius:50%;
+  background:var(--volt);color:var(--volt-ink);border:0;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer;display:grid;place-items:center}
+@media(min-width:900px){.fab{bottom:28px}}
+
+/* ---------- Tabbar / Sidebar ---------- */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;
+  padding:6px 6px calc(var(--sab) + 6px);background:color-mix(in srgb,var(--surface) 88%,transparent);
+  backdrop-filter:saturate(180%) blur(20px);border-top:1px solid var(--line)}
+.tab{flex:1;background:none;border:0;padding:6px 2px;display:flex;flex-direction:column;align-items:center;gap:3px;
+  color:var(--muted);font-size:10.5px;font-weight:650;cursor:pointer;border-radius:12px}
+.tab[aria-current="true"]{color:var(--volt)}
+.nav{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:14px;background:none;border:0;
+  color:var(--muted);font-weight:600;cursor:pointer;width:100%;text-align:left}
+.nav[aria-current="true"]{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.brand{display:flex;align-items:center;gap:10px;padding:6px 14px 18px}
+.brand .m{width:34px;height:34px;border-radius:11px;background:var(--volt);color:var(--volt-ink);display:grid;place-items:center;font-family:var(--font-display);font-weight:800}
+.brand .n{font-family:var(--font-display);font-weight:800;font-size:19px}
+
+/* ---------- Sheet / modal ---------- */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:60;opacity:0;transition:opacity .2s;backdrop-filter:blur(2px)}
+.scrim.on{opacity:1}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:61;background:var(--surface);
+  border-radius:26px 26px 0 0;padding:8px 16px calc(var(--sab) + 20px);max-height:92vh;overflow:auto;
+  transform:translateY(100%);transition:transform .26s cubic-bezier(.32,.72,0,1);border:1px solid var(--line)}
+.sheet.on{transform:none}
+@media(min-width:700px){
+  .sheet{left:50%;right:auto;bottom:auto;top:50%;width:560px;border-radius:24px;padding:8px 22px 22px;
+    transform:translate(-50%,-46%) scale(.97);opacity:0;max-height:88vh}
+  .sheet.on{transform:translate(-50%,-50%);opacity:1}
+}
+.grab{width:38px;height:5px;border-radius:3px;background:var(--line);margin:6px auto 12px}
+.sheet h2{font-size:21px;font-weight:800;margin-bottom:4px}
+.sheet .lead{color:var(--muted);font-size:14px;margin-bottom:16px}
+
+/* ---------- Forms ---------- */
+.f{margin-bottom:14px}
+.f label{display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:6px}
+.f input,.f select,.f textarea{width:100%;min-height:var(--tap);padding:12px 14px;border-radius:var(--r-field);
+  background:var(--surface-2);border:1px solid transparent;outline:none}
+.f textarea{min-height:92px;resize:vertical}
+.f input:focus,.f textarea:focus,.f select:focus{border-color:var(--volt)}
+.f input:focus-visible,.f textarea:focus-visible{box-shadow:0 0 0 3px rgba(0,194,163,.25)}
+.f .hint{font-size:12px;color:var(--muted);margin-top:5px}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.seg{display:flex;gap:4px;background:var(--surface-2);padding:4px;border-radius:14px}
+.seg button{flex:1;min-height:42px;border:0;background:none;border-radius:11px;font-weight:650;cursor:pointer;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.actions{display:flex;gap:10px;margin-top:18px}
+.actions .btn{flex:1}
+.pinpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.pinpad button{min-height:60px;border-radius:18px;border:1px solid var(--line);background:var(--surface-2);
+  font-family:var(--font-display);font-size:22px;font-weight:700;cursor:pointer}
+.pindots{display:flex;gap:12px;justify-content:center;margin:18px 0 4px}
+.pindots i{width:14px;height:14px;border-radius:50%;background:var(--line)}
+.pindots i.on{background:var(--volt)}
+
+/* ---------- Route & Vorschau ---------- */
+.routebox{background:var(--surface-2);border-radius:var(--r-inner);padding:10px 10px 6px;margin-bottom:14px;
+  border:1px solid var(--line)}
+.routemeta{display:flex;justify-content:space-between;font-size:12px;font-weight:650;color:var(--muted);padding:4px 4px 2px}
+.preview{background:#fff;color:#111;border-radius:var(--r-inner);padding:16px;max-height:38vh;overflow:auto;
+  font-family:Georgia,serif;border:1px solid var(--line);margin-bottom:4px}
+.preview h1{font-size:19px;margin:0 0 4px}
+.preview h2{font-size:11px;text-transform:uppercase;letter-spacing:.1em;font-family:var(--font-body);
+  border-bottom:1px solid #222;padding-bottom:3px;margin:16px 0 6px}
+.preview table{width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:11.5px}
+.preview th{text-align:left;border-bottom:1px solid #222;padding:3px 4px;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em}
+.preview td{border-bottom:1px solid #ddd;padding:4px;vertical-align:top}
+.preview .meta{font-family:var(--font-body);font-size:11px;color:#555}
+
+/* ---------- Empty / toast ---------- */
+.empty{text-align:center;padding:34px 18px;color:var(--muted)}
+.empty .e{font-family:var(--font-display);font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px}
+.toast{position:fixed;left:50%;bottom:calc(var(--sab) + 108px);transform:translate(-50%,20px);z-index:80;
+  background:var(--text);color:var(--bg);padding:12px 18px;border-radius:999px;font-weight:650;font-size:14px;
+  opacity:0;transition:.22s;pointer-events:none;max-width:88vw;text-align:center}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* ---------- Ride mode (Signature) ---------- */
+#ride{position:fixed;inset:0;z-index:200;background:#04070A;color:#E8FFFA;display:none;
+  flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:28px;text-align:center}
+#ride.on{display:flex}
+#ride .live{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--volt)}
+#ride .dot{width:9px;height:9px;border-radius:50%;background:var(--volt);animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.8)}}
+#ride .clock{font-family:var(--font-display);font-size:clamp(64px,22vw,132px);font-weight:800;line-height:1;letter-spacing:-.03em}
+#ride .meta{color:#7FA69E;font-size:15px;margin-top:10px}
+#ride .ridestats{display:flex;gap:38px;margin-top:18px}
+#ride .ridestats .k{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E8078;font-weight:700}
+#ride .ridestats .v{font-family:var(--font-display);font-size:34px;font-weight:800;line-height:1.1;margin-top:2px}
+#ride .ridestats .u{font-size:12px;color:#7FA69E;font-weight:600}
+#ride .hold{margin-top:38px;position:relative;width:132px;height:132px;border-radius:50%;
+  border:2px solid rgba(0,194,163,.3);display:grid;place-items:center;cursor:pointer;user-select:none;
+  font-weight:700;font-size:14px;color:#9FD8CE}
+#ride .ring{position:absolute;inset:-2px;border-radius:50%;
+  background:conic-gradient(var(--volt) calc(var(--p,0)*1%),transparent 0);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));
+          mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px))}
+
+/* ---------- Print ---------- */
+#print{display:none}
+@media print{
+  body{background:#fff;color:#000}
+  .shell,.tabbar,.fab,.scrim,.sheet,.toast,#ride{display:none !important}
+  #print{display:block;font-family:Georgia,"Times New Roman",serif;padding:0;color:#000}
+  #print h1{font-size:24pt;margin:0 0 2mm}
+  #print h2{font-size:12pt;margin:8mm 0 2mm;border-bottom:1.5pt solid #000;padding-bottom:1.5mm;
+    text-transform:uppercase;letter-spacing:.1em;font-family:Helvetica,Arial,sans-serif}
+  #print table{width:100%;border-collapse:collapse;font-size:9.5pt;font-family:Helvetica,Arial,sans-serif}
+  #print th{text-align:left;border-bottom:.75pt solid #000;padding:1.5mm 2mm;font-size:8pt;text-transform:uppercase;letter-spacing:.06em}
+  #print td{border-bottom:.25pt solid #bbb;padding:1.8mm 2mm;vertical-align:top}
+  #print .meta{font-family:Helvetica,Arial,sans-serif;font-size:9pt;color:#444;margin-bottom:1mm}
+  @page{margin:16mm}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="ride" role="dialog" aria-modal="true" aria-label="Fahrmodus"></div>
+<div id="print"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   RidePilot – v1.0  (Phasen 1–10)
+   Alle Daten bleiben auf dem Gerät. Kein Server, kein Tracking.
+   ========================================================= */
+
+/* ---------- 1. Speicher-Adapter -------------------------- */
+const KEY = 'ridepilot:db';
+const store = {
+  async get(){
+    if (window.storage) { try { const r = await window.storage.get(KEY); return r ? JSON.parse(r.value) : null; } catch(e){ return null; } }
+    try { const raw = window.localStorage.getItem(KEY); return raw ? JSON.parse(raw) : null; } catch(e){ return null; }
+  },
+  async set(v){
+    const s = JSON.stringify(v);
+    if (window.storage) { try { await window.storage.set(KEY, s); return true; } catch(e){} }
+    try { window.localStorage.setItem(KEY, s); return true; } catch(e){ return false; }
+  }
+};
+
+/* ---------- 2. Datenmodell ------------------------------- */
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const fresh = () => ({
+  v:1,
+  settings:{ theme:'system', units:'km', pin:'1234', pinChanged:false, jbl:'', onboarded:false },
+  activeId:null, vehicles:[], trips:[], maint:[], docs:[]
+});
+let db = fresh();
+let view = 'dashboard';
+
+const MTYPES = {
+  service:  { l:'Service',      m:12, k:3000 },
+  oel:      { l:'Öl',           m:12, k:3000 },
+  bremsen:  { l:'Bremsen',      m:12, k:5000 },
+  reifen:   { l:'Reifen',       m:24, k:8000 },
+  batterie: { l:'Batterie',     m:12, k:10000 },
+  licht:    { l:'Beleuchtung',  m:12, k:0 },
+  sonstige: { l:'Sonstige Arbeiten', m:0, k:0 }
+};
+const DOCCATS = ['Versicherung','Kaufvertrag','Garantie','Rechnung','Servicebericht','Foto','Sonstiges'];
+
+/* ---------- 3. Helfer ------------------------------------ */
+const $  = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const U   = () => db.settings.units === 'mi' ? 'mi' : 'km';
+const toU = km => db.settings.units === 'mi' ? km * 0.621371 : km;
+const fromU = v => db.settings.units === 'mi' ? v / 0.621371 : v;
+const nKm = km => Math.round(toU(km || 0)).toLocaleString('de-CH');
+const fDate = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('de-CH', {day:'2-digit', month:'short', year:'numeric'}) : '–';
+const today = () => new Date().toISOString().slice(0,10);
+const addMonths = (iso, m) => { const d = new Date(iso + 'T00:00:00'); d.setMonth(d.getMonth() + m); return d.toISOString().slice(0,10); };
+const daysTo = iso => Math.round((new Date(iso + 'T00:00:00') - new Date(today() + 'T00:00:00')) / 86400000);
+const veh = () => db.vehicles.find(v => v.id === db.activeId) || db.vehicles[0] || null;
+const byV = arr => { const v = veh(); return v ? arr.filter(x => x.vehicleId === v.id) : []; };
+const sortD = arr => [...arr].sort((a,b) => (b.date || '').localeCompare(a.date || ''));
+
+let saveT, saveWarned = false;
+function save(){
+  clearTimeout(saveT);
+  saveT = setTimeout(async () => {
+    const ok = await store.set(db);
+    if (!ok && !saveWarned){
+      saveWarned = true;
+      toast('Speichern fehlgeschlagen – Speicher voll oder gesperrt.');
+    }
+  }, 120);
+}
+
+/* Eigener Bestätigungsdialog statt confirm() –
+   Systemdialoge werden in eingebetteten Ansichten blockiert. */
+let pendingConfirm = null;
+function ask(title, text, okLabel, fn){
+  pendingConfirm = fn;
+  sheet('<h2>' + esc(title) + '</h2><div class="lead">' + esc(text) + '</div>' +
+    '<div class="actions"><button class="btn ghost" data-act="close-sheet">Abbrechen</button>' +
+    '<button class="btn d" data-act="confirm-yes">' + esc(okLabel) + '</button></div>');
+}
+
+/* Entfernung zwischen zwei Punkten in Metern */
+function dist(a, b){
+  const R = 6371000, rad = x => x * Math.PI / 180;
+  const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
+  const s = Math.sin(dLat/2)**2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+function trackLength(t){
+  let m = 0; for (let i = 1; i < t.length; i++) m += dist(t[i-1], t[i]); return m / 1000;
+}
+/* Route als eigenständige SVG-Zeichnung – ohne Kartendienst, ohne Datenabfluss */
+function routeSVG(track, w, h, thin){
+  if (!track || track.length < 2) return '';
+  const lat = track.map(p => p.lat), lng = track.map(p => p.lng);
+  const la0 = Math.min(...lat), la1 = Math.max(...lat), ln0 = Math.min(...lng), ln1 = Math.max(...lng);
+  const k = Math.cos((la0 + la1) / 2 * Math.PI / 180);
+  const spanX = Math.max((ln1 - ln0) * k, 1e-6), spanY = Math.max(la1 - la0, 1e-6);
+  const pad = thin ? 3 : 16;
+  const s = Math.min((w - pad*2) / spanX, (h - pad*2) / spanY);
+  const ox = (w - spanX * s) / 2, oy = (h - spanY * s) / 2;
+  const X = p => ox + (p.lng - ln0) * k * s;
+  const Y = p => oy + (la1 - p.lat) * s;
+  const d = track.map((p, i) => (i ? 'L' : 'M') + X(p).toFixed(1) + ' ' + Y(p).toFixed(1)).join(' ');
+  const a = track[0], b = track[track.length - 1];
+  return '<svg viewBox="0 0 ' + w + ' ' + h + '" width="100%" height="' + h + '" style="display:block">' +
+    '<path d="' + d + '" fill="none" stroke="var(--volt)" stroke-width="' + (thin ? 2 : 3.5) + '" stroke-linecap="round" stroke-linejoin="round"/>' +
+    (thin ? '' :
+      '<circle cx="' + X(a).toFixed(1) + '" cy="' + Y(a).toFixed(1) + '" r="6" fill="var(--volt)"/>' +
+      '<circle cx="' + X(b).toFixed(1) + '" cy="' + Y(b).toFixed(1) + '" r="6" fill="none" stroke="var(--volt)" stroke-width="3"/>') +
+    '</svg>';
+}
+const mapsLink = t => t && t.length > 1
+  ? 'https://maps.apple.com/?saddr=' + t[0].lat.toFixed(5) + ',' + t[0].lng.toFixed(5) +
+    '&daddr=' + t[t.length-1].lat.toFixed(5) + ',' + t[t.length-1].lng.toFixed(5) + '&dirflg=d'
+  : '';
+
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('on'), 2200);
+}
+
+function applyTheme(){
+  const s = db.settings.theme;
+  const dark = s === 'dark' || (s === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  document.querySelector('meta[name=theme-color]').content = dark ? '#080B0E' : '#EFF2F6';
+}
+
+/* Bild auf max. 900px verkleinern -> spart Speicher */
+function shrink(file, max = 900, q = 0.75){
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onerror = () => rej(new Error('Datei konnte nicht gelesen werden.'));
+    fr.onload = () => {
+      const img = new Image();
+      img.onerror = () => rej(new Error('Kein gültiges Bild.'));
+      img.onload = () => {
+        const sc = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        res(c.toDataURL('image/jpeg', q));
+      };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+function readAsData(file){
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(fr.result); fr.onerror = () => rej(new Error('Datei konnte nicht gelesen werden.'));
+    fr.readAsDataURL(file);
+  });
+}
+
+/* ---------- 4. Wartungslogik ----------------------------- */
+function dueList(){
+  const v = veh(); if (!v) return [];
+  const out = [];
+  Object.entries(MTYPES).forEach(([k, def]) => {
+    if (!def.m && !def.k) return;
+    const last = sortD(byV(db.maint).filter(m => m.type === k))[0];
+    if (!last) return;
+    const iM = last.intervalMonths ?? def.m, iK = last.intervalKm ?? def.k;
+    const dDate = iM ? addMonths(last.date, iM) : null;
+    const dKm   = iK ? (last.odo || 0) + iK : null;
+    const dLeft = dDate ? daysTo(dDate) : null;
+    const kLeft = dKm ? dKm - (v.odo || 0) : null;
+    let st = 'ok';
+    if ((dLeft !== null && dLeft < 0) || (kLeft !== null && kLeft < 0)) st = 'bad';
+    else if ((dLeft !== null && dLeft <= 30) || (kLeft !== null && kLeft <= 300)) st = 'warn';
+    out.push({ key:k, label:def.l, dueDate:dDate, dueKm:dKm, dLeft, kLeft, st, last });
+  });
+  return out.sort((a, b) => (a.dLeft ?? 9e9) - (b.dLeft ?? 9e9));
+}
+function tasks(){
+  const v = veh(); if (!v) return [];
+  const t = dueList().filter(d => d.st !== 'ok').map(d => ({
+    st: d.st, t: d.label + ' fällig',
+    s: d.dLeft !== null ? (d.dLeft < 0 ? Math.abs(d.dLeft) + ' Tage überfällig' : 'in ' + d.dLeft + ' Tagen')
+                        : (d.kLeft < 0 ? 'seit ' + nKm(-d.kLeft) + ' ' + U() + ' fällig' : 'in ' + nKm(d.kLeft) + ' ' + U()),
+    go: 'maintenance'
+  }));
+  if (v.insuranceUntil){
+    const d = daysTo(v.insuranceUntil);
+    if (d < 0) t.unshift({ st:'bad', t:'Versicherung abgelaufen', s:'Seit ' + fDate(v.insuranceUntil), go:'vehicles' });
+    else if (d <= 45) t.unshift({ st:'warn', t:'Versicherung läuft aus', s:'Gültig bis ' + fDate(v.insuranceUntil), go:'vehicles' });
+  }
+  if (!byV(db.docs).length) t.push({ st:'warn', t:'Keine Dokumente hinterlegt', s:'Versicherungspolice und Kaufvertrag ablegen', go:'docs' });
+  return t;
+}
+
+/* ---------- 5. Icons ------------------------------------- */
+const I = {
+  dash:'<path d="M4 13h7V4H4v9Zm0 7h7v-5H4v5Zm9 0h7v-9h-7v9Zm0-16v5h7V4h-7Z"/>',
+  scoot:'<circle cx="5.5" cy="17.5" r="3"/><circle cx="18.5" cy="17.5" r="3"/><path d="M8.5 17.5h7M13 6h3l2.5 11.5M13 6l-2 8H8.5"/>',
+  route:'<circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18h5a4 4 0 0 0 0-8h-3a4 4 0 0 1 0-8"/>',
+  wrench:'<path d="M14.7 6.3a4 4 0 0 0 5 5l-8.4 8.4a2.5 2.5 0 0 1-3.5-3.5l8.4-8.4Z"/><path d="M17.5 3.5 20.5 6.5"/>',
+  doc:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/>',
+  pdf:'<path d="M7 8V4h10v4"/><rect x="4" y="8" width="16" height="7" rx="2"/><path d="M7 15h10v5H7z"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.2 5.2l2.1 2.1M16.7 16.7l2.1 2.1M18.8 5.2l-2.1 2.1M7.3 16.7l-2.1 2.1"/>',
+  backup:'<path d="M4 7h16v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7Z"/><path d="M3 3h18v4H3z"/><path d="M10 12h4"/>',
+  more:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
+  chev:'<path d="m9 6 6 6-6 6"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  speed:'<path d="M12 14 16 9"/><circle cx="12" cy="14" r="1.5"/><path d="M4.5 17a9 9 0 1 1 15 0"/>',
+  bolt:'<path d="M13 3 5 14h6l-1 7 8-11h-6l1-7Z"/>',
+  shield:'<path d="M12 3 5 6v6c0 4.5 3 7.6 7 9 4-1.4 7-4.5 7-9V6l-7-3Z"/>',
+  speaker:'<rect x="6" y="3" width="12" height="18" rx="3"/><circle cx="12" cy="14" r="3.2"/><circle cx="12" cy="7" r="1"/>'
+};
+const svg = (p, s = 22) => '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
+
+const NAV = [
+  ['dashboard','Dashboard',I.dash], ['vehicles','Roller',I.scoot], ['trips','Fahrten',I.route],
+  ['maintenance','Wartung',I.wrench], ['docs','Dokumente',I.doc], ['pdf','PDF',I.pdf],
+  ['settings','Einstellungen',I.gear], ['backup','Backup',I.backup]
+];
+const TABS = [['dashboard','Start',I.dash],['trips','Fahrten',I.route],['maintenance','Wartung',I.wrench],['docs','Dokumente',I.doc],['more','Mehr',I.more]];
+
+/* ---------- 6. Sheet ------------------------------------- */
+let sheetOpen = false;
+function sheet(html){
+  closeSheet(true);
+  const scrim = document.createElement('div'); scrim.className = 'scrim'; scrim.dataset.act = 'close-sheet';
+  const s = document.createElement('div'); s.className = 'sheet'; s.setAttribute('role','dialog'); s.setAttribute('aria-modal','true');
+  s.innerHTML = '<div class="grab"></div>' + html;
+  document.body.append(scrim, s);
+  requestAnimationFrame(() => { scrim.classList.add('on'); s.classList.add('on'); });
+  sheetOpen = true;
+  const first = s.querySelector('input,select,textarea,button');
+  if (first && window.innerWidth > 700) first.focus({ preventScroll:true });
+}
+function closeSheet(instant){
+  document.querySelectorAll('.sheet,.scrim').forEach(el => {
+    el.classList.remove('on');
+    if (instant) el.remove(); else setTimeout(() => el.remove(), 260);
+  });
+  sheetOpen = false;
+}
+const val = id => { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
+
+/* ---------- 7. Views ------------------------------------- */
+function head(title, sub, right){
+  return '<div class="topbar"><div><div class="title display">' + esc(title) + '</div>' +
+    (sub ? '<div class="sub">' + esc(sub) + '</div>' : '') + '</div><div class="spacer"></div>' + (right || '') + '</div>';
+}
+function empty(title, text, btn){
+  return '<div class="card"><div class="empty"><div class="e">' + esc(title) + '</div><div>' + esc(text) + '</div>' +
+    (btn ? '<div style="margin-top:16px">' + btn + '</div>' : '') + '</div></div>';
+}
+const rowHTML = (o) =>
+  '<button class="row" data-act="' + o.act + '"' + (o.id ? ' data-id="' + o.id + '"' : '') + (o.arg ? ' data-arg="' + o.arg + '"' : '') + '>' +
+    (o.thumb ? '<span class="ico" style="padding:3px;overflow:hidden">' + o.thumb + '</span>'
+      : o.icon ? '<span class="ico ' + (o.tone || '') + '">' + svg(o.icon, 19) + '</span>' : '') +
+    '<span class="grow"><span class="t">' + esc(o.t) + '</span>' + (o.s ? '<span class="s">' + esc(o.s) + '</span>' : '') + '</span>' +
+    (o.badge ? o.badge : (o.v ? '<span class="v num">' + esc(o.v) + '</span>' : '')) +
+    '<span class="chev">' + svg(I.chev, 16) + '</span></button>';
+
+/* --- Dashboard --- */
+function vDashboard(){
+  const v = veh(); if (!v) return vSetupPrompt();
+  const trips = sortD(byV(db.trips)); const last = trips[0];
+  const km30 = trips.filter(t => daysTo(t.date) > -30).reduce((s, t) => s + (+t.distance || 0), 0);
+  const due = dueList().filter(d => d.st !== 'ok')[0] || dueList()[0];
+  const ts = tasks();
+  const insDays = v.insuranceUntil ? daysTo(v.insuranceUntil) : null;
+
+  let h = head('Hallo', new Date().toLocaleDateString('de-CH', { weekday:'long', day:'numeric', month:'long' }));
+
+  h += '<div class="card odo"><div class="ticks"></div><div class="row" style="padding:0;min-height:0">' +
+    (v.photo ? '<img class="thumb" src="' + v.photo + '" alt="">' : '<span class="thumb" style="display:grid;place-items:center">' + svg(I.scoot, 30) + '</span>') +
+    '<div class="grow"><span class="plate mono">' + esc(v.plate || 'ohne Kennzeichen') + '</span>' +
+    '<div style="font-weight:700;margin-top:6px;font-size:15px">' + esc(v.name || (v.make + ' ' + v.model)) + '</div></div></div>' +
+    '<div class="big num">' + nKm(v.odo) + '<small>' + U() + '</small></div>' +
+    '<div style="font-size:13px;font-weight:600;opacity:.75;margin-top:4px;position:relative;z-index:1">Kilometerstand · ' + esc(v.make + ' ' + v.model) + '</div></div>';
+
+  h += '<div class="grid two" style="margin-top:14px">';
+  h += '<div class="card"><div class="card-h"><span class="eyebrow">Nächste Wartung</span></div>' +
+    (due ? '<div class="display" style="font-size:20px;font-weight:800">' + esc(due.label) + '</div>' +
+      '<div style="color:var(--muted);font-size:14px;margin-top:4px">' +
+      (due.dueDate ? 'Fällig ' + fDate(due.dueDate) : '') + (due.dueKm ? (due.dueDate ? ' · ' : 'Fällig ') + 'bei ' + nKm(due.dueKm) + ' ' + U() : '') + '</div>' +
+      '<div style="margin-top:12px"><span class="badge ' + (due.st === 'bad' ? 'bad' : due.st === 'warn' ? 'warn' : 'ok') + '">' +
+      (due.st === 'bad' ? 'Überfällig' : due.st === 'warn' ? 'Bald fällig' : 'Alles im grünen Bereich') + '</span></div>'
+      : '<div style="color:var(--muted);font-size:14px">Noch keine Wartung erfasst. Trage den letzten Service ein, damit RidePilot rechnen kann.</div>') +
+    '</div>';
+
+  h += '<div class="card"><div class="card-h"><span class="eyebrow">Letzte Fahrt</span></div>' +
+    (last ? '<div class="display" style="font-size:20px;font-weight:800">' + nKm(+last.distance) + ' ' + U() + '</div>' +
+      '<div style="color:var(--muted);font-size:14px;margin-top:4px">' + esc(last.from || '?') + ' → ' + esc(last.to || '?') + '</div>' +
+      '<div style="color:var(--muted);font-size:13px;margin-top:2px">' + fDate(last.date) + (last.duration ? ' · ' + esc(last.duration) + ' Min.' : '') + '</div>' +
+      (last.track && last.track.length > 1 ? '<div class="routebox" style="margin:12px 0 0">' + routeSVG(last.track, 300, 72) + '</div>' : '')
+      : '<div style="color:var(--muted);font-size:14px">Noch keine Fahrt erfasst.</div>') + '</div></div>';
+
+  h += '<div class="stats" style="margin-top:14px">' +
+    '<div class="stat"><div class="k">Letzte 30 Tage</div><div class="v num">' + nKm(km30) + ' <span style="font-size:14px">' + U() + '</span></div></div>' +
+    '<div class="stat"><div class="k">Fahrten total</div><div class="v num">' + trips.length + '</div></div>' +
+    '<div class="stat"><div class="k">Versicherung</div><div class="v" style="font-size:16px">' +
+      (insDays === null ? '–' : insDays < 0 ? 'Abgelaufen' : 'bis ' + fDate(v.insuranceUntil)) + '</div></div>' +
+    '<div class="stat"><div class="k">Batterie</div><div class="v" style="font-size:16px">' +
+      (v.batteryHealth ? esc(v.batteryHealth) + ' %' : (v.battery ? esc(v.battery) : '–')) + '</div></div></div>';
+
+  h += '<div class="card-h" style="margin:22px 0 10px"><span class="eyebrow">Offene Aufgaben</span><div class="spacer"></div>' +
+       '<span class="badge">' + ts.length + '</span></div>';
+  h += ts.length
+    ? '<div class="list">' + ts.map(t => rowHTML({ act:'go', arg:t.go, t:t.t, s:t.s, icon:t.st === 'bad' ? I.shield : I.wrench, tone:t.st === 'bad' ? 'd' : 'w' })).join('') + '</div>'
+    : '<div class="card"><div class="empty" style="padding:22px"><div class="e">Nichts offen</div><div>Alle Wartungen und Fristen sind aktuell.</div></div></div>';
+
+  h += '<div class="card-h" style="margin:22px 0 10px"><span class="eyebrow">Schnellaktionen</span></div><div class="quick">' +
+    qa('trip-new', I.route, 'Fahrt erfassen') + qa('odo-set', I.speed, 'Kilometerstand') +
+    qa('ride-on', I.bolt, 'Fahrmodus starten') + qa('jbl', I.speaker, 'JBL Portable öffnen') + '</div>';
+  return h;
+}
+const qa = (act, ico, label) => '<button class="qa" data-act="' + act + '"><span class="ico g">' + svg(ico, 19) + '</span><span class="l">' + esc(label) + '</span></button>';
+
+function vSetupPrompt(){
+  return head('RidePilot') + empty('Noch kein Roller angelegt',
+    'Lege dein Fahrzeug an – danach stehen Dashboard, Fahrten und Wartung bereit.',
+    '<button class="btn p" data-act="veh-new">Roller anlegen</button>');
+}
+
+/* --- Roller --- */
+function vVehicles(){
+  let h = head('Roller', db.vehicles.length + ' Fahrzeug' + (db.vehicles.length === 1 ? '' : 'e'),
+    '<button class="btn p sm" data-act="veh-new">' + svg(I.plus, 17) + ' Neu</button>');
+  if (!db.vehicles.length) return h + empty('Keine Fahrzeuge', 'Der erste Roller ist in 30 Sekunden angelegt.',
+    '<button class="btn p" data-act="veh-new">Roller anlegen</button>');
+  h += '<div class="list">' + db.vehicles.map(v => rowHTML({
+      act:'veh-open', id:v.id, t:v.name || (v.make + ' ' + v.model),
+      s:[v.make + ' ' + v.model, v.year, v.plate].filter(Boolean).join(' · '),
+      icon:I.scoot, tone:v.id === db.activeId ? 'g' : '',
+      badge:v.id === db.activeId ? '<span class="badge ok">Aktiv</span>' : ''
+    })).join('') + '</div>';
+  return h;
+}
+function vehSheet(id){
+  const v = db.vehicles.find(x => x.id === id) || {};
+  const isNew = !id;
+  sheet('<h2>' + (isNew ? 'Roller anlegen' : 'Roller bearbeiten') + '</h2>' +
+    '<div class="lead">Fahrzeugdaten, Versicherung und Servicepartner an einem Ort.</div>' +
+    '<div class="f"><label>Profilbild</label><input type="file" id="v-photo" accept="image/*">' +
+      (v.photo ? '<div style="margin-top:10px"><img src="' + v.photo + '" style="width:88px;height:88px;object-fit:cover;border-radius:16px"></div>' : '') +
+      '<div class="hint" id="v-photo-info">Wird verkleinert auf dem Gerät gespeichert.</div></div>' +
+    fld('v-name','Fahrzeugname', v.name || '', 'z. B. Volta') +
+    '<div class="f2">' + fld('v-make','Hersteller', v.make || 'Volta') + fld('v-model','Modell', v.model || 'VSX') + '</div>' +
+    '<div class="f2">' + fld('v-year','Baujahr', v.year || '', '2024', 'number') + fld('v-color','Farbe', v.color || '') + '</div>' +
+    '<div class="f2">' + fld('v-plate','Kennzeichen', v.plate || '', 'ZH 12345') + fld('v-vin','VIN (optional)', v.vin || '') + '</div>' +
+    fld('v-odo','Kilometerstand (' + U() + ')', v.odo != null ? Math.round(toU(v.odo)) : '', '0', 'number') +
+    '<div class="f2">' + fld('v-ins','Versicherung', v.insurer || '', 'Gesellschaft') + fld('v-insuntil','Gültig bis', v.insuranceUntil || '', '', 'date') + '</div>' +
+    '<div class="f2">' + fld('v-policy','Policennummer', v.policy || '') + fld('v-batt','Batterie (% Gesundheit)', v.batteryHealth || '', '100', 'number') + '</div>' +
+    fld('v-partner','Servicepartner', v.servicePartner || '') +
+    '<div class="f"><label>Notizen</label><textarea id="v-notes">' + esc(v.notes || '') + '</textarea></div>' +
+    '<div class="actions"><button class="btn ghost" data-act="close-sheet">Abbrechen</button>' +
+    '<button class="btn p" data-act="veh-save" data-id="' + (id || '') + '">Speichern</button></div>' +
+    (isNew ? '' : '<button class="btn wide ghost" style="margin-top:10px" data-act="veh-activate" data-id="' + id + '">Als aktiven Roller setzen</button>' +
+      '<div class="hint" style="margin-top:12px;text-align:center">Löschen nur im Managerbereich (Einstellungen → Manager).</div>'));
+}
+function fld(id, label, v, ph, type){
+  return '<div class="f"><label for="' + id + '">' + esc(label) + '</label>' +
+    '<input id="' + id + '" type="' + (type || 'text') + '" value="' + esc(v) + '" placeholder="' + esc(ph || '') + '"></div>';
+}
+async function vehSave(id){
+  const name = val('v-name'), make = val('v-make'), model = val('v-model');
+  if (!make && !model && !name) return toast('Bitte mindestens Hersteller oder Name angeben.');
+  let v = db.vehicles.find(x => x.id === id);
+  if (!v){ v = { id: uid(), createdAt: today() }; db.vehicles.push(v); if (!db.activeId) db.activeId = v.id; }
+  Object.assign(v, {
+    name, make, model, year: val('v-year'), color: val('v-color'), plate: val('v-plate').toUpperCase(),
+    vin: val('v-vin').toUpperCase(), odo: Math.round(fromU(+val('v-odo') || 0)),
+    insurer: val('v-ins'), insuranceUntil: val('v-insuntil'), policy: val('v-policy'),
+    batteryHealth: val('v-batt'), servicePartner: val('v-partner'),
+    notes: document.getElementById('v-notes').value.trim()
+  });
+  const f = document.getElementById('v-photo');
+  if (f && f.files[0]) { try { v.photo = await shrink(f.files[0]); } catch(e){ toast(e.message); } }
+  db.settings.onboarded = true; save(); closeSheet(); render(); toast('Roller gespeichert');
+}
+
+/* --- Fahrten --- */
+function vTrips(){
+  const v = veh(); if (!v) return vSetupPrompt();
+  const list = sortD(byV(db.trips));
+  const total = list.reduce((s, t) => s + (+t.distance || 0), 0);
+  const routes = list.filter(t => t.track && t.track.length > 1).length;
+  let h = head('Fahrten', list.length ? nKm(total) + ' ' + U() + ' erfasst · ' + routes + ' mit Route' : 'Noch nichts erfasst',
+    '<button class="btn p sm" data-act="trip-new">' + svg(I.plus, 17) + ' Neu</button>');
+  if (!list.length) return h + empty('Kein Fahrtenbuch', 'Starte den Fahrmodus – die Strecke wird per GPS aufgezeichnet. Oder trage eine Fahrt von Hand ein.',
+    '<button class="btn p" data-act="ride-on">Fahrmodus starten</button>') +
+    '<div class="card"><div class="eyebrow">Routenverlauf</div><div style="color:var(--muted);font-size:14px;margin-top:6px">Jede im Fahrmodus aufgezeichnete Fahrt speichert ihre Strecke. Die Route liegt auf dem Gerät und wird ohne Kartendienst gezeichnet – nur der Knopf „In Karten öffnen" ruft Apple Karten auf.</div>' +
+    '<button class="btn wide ghost" style="margin-top:14px" data-act="trip-new">Fahrt von Hand erfassen</button></div>';
+  h += '<div class="list">' + list.map(t => rowHTML({
+      act:'trip-open', id:t.id, t:(t.from || '?') + ' → ' + (t.to || '?'),
+      s:fDate(t.date) + (t.duration ? ' · ' + t.duration + ' Min.' : '') + (t.track ? ' · Route' : ''),
+      v:nKm(+t.distance) + ' ' + U(),
+      thumb: t.track && t.track.length > 1 ? routeSVG(t.track, 30, 30, true) : null,
+      icon:I.route
+    })).join('') + '</div>';
+  return h;
+}
+let pendingTrack = null;
+function tripSheet(id, pre){
+  const t = db.trips.find(x => x.id === id) || {};
+  pendingTrack = pre && pre.track && pre.track.length > 1 ? pre.track : null;
+  const track = t.track && t.track.length > 1 ? t.track : pendingTrack;
+  const distVal = pre && pre.km ? Math.round(toU(pre.km) * 10) / 10
+                : (t.distance != null ? Math.round(toU(t.distance)) : '');
+  sheet('<h2>' + (id ? 'Fahrt' : 'Fahrt erfassen') + '</h2>' +
+    '<div class="lead">' + (track ? 'Aufgezeichnete Route – Distanz ist bereits übernommen.' : 'Kilometerstand wird beim Speichern automatisch erhöht.') + '</div>' +
+    (track ? '<div class="routebox">' + routeSVG(track, 320, 190) +
+        '<div class="routemeta"><span>' + track.length + ' Punkte</span><span>' + toU(trackLength(track)).toFixed(1) + ' ' + U() + '</span></div></div>' +
+        '<a class="btn wide ghost" style="margin-bottom:14px;text-decoration:none" href="' + mapsLink(track) + '" target="_blank" rel="noopener">In Karten öffnen</a>'
+      : '') +
+    '<div class="f2">' + fld('t-date','Datum', t.date || today(), '', 'date') + fld('t-dist','Distanz (' + U() + ')', distVal, '0', 'number') + '</div>' +
+    '<div class="f2">' + fld('t-from','Start', t.from || '') + fld('t-to','Ziel', t.to || '') + '</div>' +
+    fld('t-dur','Dauer (Minuten)', (pre && pre.duration) || t.duration || '', '25', 'number') +
+    '<div class="f"><label>Notizen</label><textarea id="t-notes">' + esc(t.notes || '') + '</textarea></div>' +
+    '<div class="actions">' + (id ? '<button class="btn d" data-act="trip-del" data-id="' + id + '">Löschen</button>' : '<button class="btn ghost" data-act="close-sheet">Abbrechen</button>') +
+    '<button class="btn p" data-act="trip-save" data-id="' + (id || '') + '">Speichern</button></div>');
+}
+function tripSave(id){
+  const v = veh(); if (!v) return;
+  const dist = Math.round(fromU(+val('t-dist') || 0));
+  let t = db.trips.find(x => x.id === id);
+  const oldDist = t ? (+t.distance || 0) : 0;
+  if (!t){ t = { id: uid(), vehicleId: v.id }; db.trips.push(t); }
+  Object.assign(t, { date: val('t-date') || today(), distance: dist, from: val('t-from'), to: val('t-to'),
+    duration: val('t-dur'), notes: document.getElementById('t-notes').value.trim() });
+  if (pendingTrack) { t.track = pendingTrack; pendingTrack = null; }
+  v.odo = Math.max(0, (v.odo || 0) + dist - oldDist);
+  save(); closeSheet(); render(); toast('Fahrt gespeichert · Stand ' + nKm(v.odo) + ' ' + U());
+}
+
+/* --- Wartung --- */
+function vMaint(){
+  const v = veh(); if (!v) return vSetupPrompt();
+  const due = dueList(), log = sortD(byV(db.maint));
+  let h = head('Wartung', 'Intervalle und Verlauf', '<button class="btn p sm" data-act="maint-new">' + svg(I.plus, 17) + ' Neu</button>');
+  h += '<div class="card-h" style="margin-bottom:10px"><span class="eyebrow">Fälligkeiten</span></div>';
+  h += due.length
+    ? '<div class="list">' + due.map(d => rowHTML({
+        act:'maint-new-type', arg:d.key, t:d.label,
+        s:(d.dueDate ? fDate(d.dueDate) : '') + (d.dueKm ? (d.dueDate ? ' · ' : '') + 'bei ' + nKm(d.dueKm) + ' ' + U() : ''),
+        icon:I.wrench, tone:d.st === 'bad' ? 'd' : d.st === 'warn' ? 'w' : 'g',
+        badge:'<span class="badge ' + (d.st === 'bad' ? 'bad' : d.st === 'warn' ? 'warn' : 'ok') + '">' +
+          (d.st === 'bad' ? 'Überfällig' : d.st === 'warn' ? 'Bald' : 'OK') + '</span>'
+      })).join('') + '</div>'
+    : '<div class="card"><div class="empty" style="padding:22px"><div class="e">Keine Intervalle berechnet</div><div>Erfasse eine erledigte Arbeit – daraus ergibt sich der nächste Termin.</div></div></div>';
+  h += '<div class="card-h" style="margin:22px 0 10px"><span class="eyebrow">Verlauf</span></div>';
+  h += log.length
+    ? '<div class="list">' + log.map(m => rowHTML({
+        act:'maint-open', id:m.id, t:(MTYPES[m.type] ? MTYPES[m.type].l : m.type),
+        s:fDate(m.date) + ' · ' + nKm(m.odo) + ' ' + U() + (m.notes ? ' · ' + m.notes.slice(0,36) : ''),
+        v:m.cost ? 'CHF ' + m.cost : '', icon:I.wrench
+      })).join('') + '</div>'
+    : empty('Kein Verlauf', 'Trage den letzten Service ein, damit RidePilot vorausrechnen kann.',
+        '<button class="btn p" data-act="maint-new">Arbeit erfassen</button>');
+  return h;
+}
+function maintSheet(id, presetType){
+  const m = db.maint.find(x => x.id === id) || {};
+  const type = m.type || presetType || 'service';
+  const def = MTYPES[type];
+  sheet('<h2>' + (id ? 'Wartung bearbeiten' : 'Wartung erfassen') + '</h2>' +
+    '<div class="lead">Erledigte Arbeit dokumentieren – das nächste Intervall wird daraus berechnet.</div>' +
+    '<div class="f"><label for="m-type">Art</label><select id="m-type">' +
+      Object.entries(MTYPES).map(([k, d]) => '<option value="' + k + '"' + (k === type ? ' selected' : '') + '>' + d.l + '</option>').join('') +
+    '</select></div>' +
+    '<div class="f2">' + fld('m-date','Datum', m.date || today(), '', 'date') +
+      fld('m-odo','Kilometerstand (' + U() + ')', m.odo != null ? Math.round(toU(m.odo)) : Math.round(toU(veh().odo || 0)), '0', 'number') + '</div>' +
+    '<div class="f2">' + fld('m-im','Intervall Monate', m.intervalMonths ?? def.m, '12', 'number') +
+      fld('m-ik','Intervall ' + U(), m.intervalKm != null ? Math.round(toU(m.intervalKm)) : Math.round(toU(def.k)), '3000', 'number') + '</div>' +
+    '<div class="f2">' + fld('m-cost','Kosten (CHF)', m.cost || '', '0', 'number') + fld('m-shop','Werkstatt', m.shop || (veh().servicePartner || '')) + '</div>' +
+    '<div class="f"><label>Notizen</label><textarea id="m-notes">' + esc(m.notes || '') + '</textarea></div>' +
+    '<div class="actions">' + (id ? '<button class="btn d" data-act="maint-del" data-id="' + id + '">Löschen</button>' : '<button class="btn ghost" data-act="close-sheet">Abbrechen</button>') +
+    '<button class="btn p" data-act="maint-save" data-id="' + (id || '') + '">Speichern</button></div>');
+}
+function maintSave(id){
+  const v = veh(); if (!v) return;
+  let m = db.maint.find(x => x.id === id);
+  if (!m){ m = { id: uid(), vehicleId: v.id }; db.maint.push(m); }
+  Object.assign(m, {
+    type: val('m-type'), date: val('m-date') || today(), odo: Math.round(fromU(+val('m-odo') || 0)),
+    intervalMonths: +val('m-im') || 0, intervalKm: Math.round(fromU(+val('m-ik') || 0)),
+    cost: val('m-cost'), shop: val('m-shop'), notes: document.getElementById('m-notes').value.trim()
+  });
+  if (m.odo > (v.odo || 0)) v.odo = m.odo;
+  save(); closeSheet(); render(); toast('Wartung gespeichert');
+}
+
+/* --- Dokumente --- */
+function vDocs(){
+  const v = veh(); if (!v) return vSetupPrompt();
+  const list = sortD(byV(db.docs));
+  let h = head('Dokumente', list.length + ' Ablage' + (list.length === 1 ? '' : 'n'),
+    '<button class="btn p sm" data-act="doc-new">' + svg(I.plus, 17) + ' Neu</button>');
+  if (!list.length) return h + empty('Ablage ist leer',
+    'Police, Kaufvertrag, Garantie und Rechnungen liegen hier – auch offline.',
+    '<button class="btn p" data-act="doc-new">Dokument ablegen</button>');
+  h += '<div class="list">' + list.map(d => rowHTML({
+      act:'doc-open', id:d.id, t:d.title, s:d.category + ' · ' + fDate(d.date) + (d.fileName ? ' · ' + d.fileName : ''),
+      icon:I.doc, tone:d.category === 'Versicherung' ? 'g' : ''
+    })).join('') + '</div>';
+  return h;
+}
+function docSheet(id){
+  const d = db.docs.find(x => x.id === id) || {};
+  sheet('<h2>' + (id ? 'Dokument' : 'Dokument ablegen') + '</h2>' +
+    '<div class="lead">Bleibt auf dem Gerät. Bilder werden verkleinert, PDF bis 2 MB.</div>' +
+    fld('d-title','Titel', d.title || '', 'Versicherungspolice 2026') +
+    '<div class="f2"><div class="f" style="margin:0"><label for="d-cat">Kategorie</label><select id="d-cat">' +
+      DOCCATS.map(c => '<option' + (c === d.category ? ' selected' : '') + '>' + c + '</option>').join('') + '</select></div>' +
+      fld('d-date','Datum', d.date || today(), '', 'date') + '</div>' +
+    '<div class="f"><label>Datei</label><input type="file" id="d-file" accept="image/*,application/pdf">' +
+      '<div class="hint" id="d-file-info">Bild oder PDF. Wird beim Speichern übernommen.</div>' +
+      (d.fileData ? (d.fileType && d.fileType.startsWith('image') ?
+        '<div style="margin-top:10px"><img src="' + d.fileData + '" style="max-width:100%;border-radius:14px"></div>' :
+        '<div style="margin-top:10px"><a href="' + d.fileData + '" download="' + esc(d.fileName || 'dokument.pdf') + '">' + esc(d.fileName) + ' herunterladen</a></div>') : '') + '</div>' +
+    '<div class="f"><label>Notizen</label><textarea id="d-notes">' + esc(d.notes || '') + '</textarea></div>' +
+    '<div class="actions">' + (id ? '<button class="btn d" data-act="doc-del" data-id="' + id + '">Löschen</button>' : '<button class="btn ghost" data-act="close-sheet">Abbrechen</button>') +
+    '<button class="btn p" data-act="doc-save" data-id="' + (id || '') + '">Speichern</button></div>');
+}
+async function docSave(id){
+  const v = veh(); if (!v) return;
+  const title = val('d-title'); if (!title) return toast('Bitte einen Titel angeben.');
+  let d = db.docs.find(x => x.id === id);
+  if (!d){ d = { id: uid(), vehicleId: v.id }; db.docs.push(d); }
+  Object.assign(d, { title, category: val('d-cat'), date: val('d-date') || today(), notes: document.getElementById('d-notes').value.trim() });
+  const f = document.getElementById('d-file');
+  if (f && f.files[0]){
+    const file = f.files[0];
+    try {
+      if (file.type.startsWith('image')) d.fileData = await shrink(file, 1400, .8);
+      else if (file.size > 2e6) toast('PDF grösser als 2 MB – nur der Eintrag wurde gespeichert.');
+      else d.fileData = await readAsData(file);
+      d.fileName = file.name; d.fileType = file.type;
+    } catch(e){ toast(e.message); }
+  }
+  /* Speicher hat ein Limit – lieber jetzt melden als still verlieren */
+  const ok = await store.set(db);
+  if (!ok){
+    delete d.fileData; delete d.fileName;
+    await store.set(db);
+    closeSheet(); render();
+    return toast('Datei zu gross für den Speicher – Eintrag ohne Anhang gesichert.');
+  }
+  closeSheet(); render(); toast('Dokument gespeichert');
+}
+
+/* --- PDF --- */
+function vPdf(){
+  const v = veh(); if (!v) return vSetupPrompt();
+  let h = head('PDF', 'Bericht erzeugen und drucken oder als PDF sichern');
+  h += '<div class="card"><div class="card-h"><span class="eyebrow">Umfang wählen</span></div>' +
+    '<div class="quick" style="grid-template-columns:1fr 1fr">' +
+      qa('pdf-all', I.pdf, 'Gesamtbericht') +
+      qa('pdf-vehicle', I.scoot, 'Nur Fahrzeugdaten') +
+      qa('pdf-maint', I.wrench, 'Nur Wartungen') +
+      qa('pdf-trips', I.route, 'Nur Fahrten') +
+    '</div>' +
+    '<div class="hint" style="color:var(--muted);font-size:13px;margin-top:14px">Der Bericht öffnet den Druckdialog. Dort „Als PDF sichern“ wählen – funktioniert auf iOS, Android, macOS und Windows ohne Zusatz-App.</div></div>';
+  h += '<div class="card"><div class="card-h"><span class="eyebrow">Dokumentenübersicht</span></div>' +
+    '<div style="color:var(--muted);font-size:14px">' + byV(db.docs).length + ' Einträge werden als Liste (Titel, Kategorie, Datum) mitgedruckt. Angehängte Dateien selbst bleiben in der App.</div>' +
+    '<button class="btn wide ghost" style="margin-top:14px" data-act="pdf-docs">Nur Dokumentenübersicht</button></div>';
+  return h;
+}
+function buildPrint(scope){
+  const v = veh(); const p = $('#print');
+  const now = new Date().toLocaleString('de-CH');
+  const tbl = (cols, rows) => '<table><thead><tr>' + cols.map(c => '<th>' + c + '</th>').join('') + '</tr></thead><tbody>' +
+    (rows.length ? rows.map(r => '<tr>' + r.map(c => '<td>' + esc(c ?? '') + '</td>').join('') + '</tr>').join('')
+                 : '<tr><td colspan="' + cols.length + '">Keine Einträge</td></tr>') + '</tbody></table>';
+  let h = '<h1>RidePilot Bericht</h1><div class="meta">' + esc(v.name || (v.make + ' ' + v.model)) + ' · ' + esc(v.plate || 'ohne Kennzeichen') + ' · Stand ' + nKm(v.odo) + ' ' + U() + '</div>' +
+          '<div class="meta">Erstellt ' + now + '</div>';
+  if (scope === 'all' || scope === 'vehicle'){
+    h += '<h2>Fahrzeugdaten</h2>' + tbl(['Feld','Wert'], [
+      ['Name', v.name], ['Hersteller', v.make], ['Modell', v.model], ['Baujahr', v.year], ['Farbe', v.color],
+      ['Kennzeichen', v.plate], ['VIN', v.vin], ['Kilometerstand', nKm(v.odo) + ' ' + U()],
+      ['Versicherung', v.insurer], ['Police', v.policy], ['Gültig bis', v.insuranceUntil ? fDate(v.insuranceUntil) : ''],
+      ['Batterie', v.batteryHealth ? v.batteryHealth + ' %' : ''], ['Servicepartner', v.servicePartner], ['Notizen', v.notes]
+    ].filter(r => r[1]));
+  }
+  if (scope === 'all' || scope === 'maint'){
+    h += '<h2>Wartungen</h2>' + tbl(['Datum','Art','Stand','Werkstatt','Kosten CHF','Notiz'],
+      sortD(byV(db.maint)).map(m => [fDate(m.date), MTYPES[m.type] ? MTYPES[m.type].l : m.type, nKm(m.odo) + ' ' + U(), m.shop, m.cost, m.notes]));
+    const d = dueList();
+    if (d.length) h += '<h2>Nächste Fälligkeiten</h2>' + tbl(['Art','Fällig am','Fällig bei','Status'],
+      d.map(x => [x.label, x.dueDate ? fDate(x.dueDate) : '–', x.dueKm ? nKm(x.dueKm) + ' ' + U() : '–',
+        x.st === 'bad' ? 'überfällig' : x.st === 'warn' ? 'bald' : 'ok']));
+  }
+  if (scope === 'all' || scope === 'trips'){
+    const t = sortD(byV(db.trips));
+    h += '<h2>Fahrten</h2>' + tbl(['Datum','Start','Ziel','Distanz','Dauer','Notiz'],
+      t.map(x => [fDate(x.date), x.from, x.to, nKm(+x.distance) + ' ' + U(), x.duration ? x.duration + ' Min.' : '', x.notes]));
+    h += '<div class="meta" style="margin-top:3mm">Total ' + nKm(t.reduce((s, x) => s + (+x.distance || 0), 0)) + ' ' + U() + ' aus ' + t.length + ' Fahrten</div>';
+  }
+  if (scope === 'all' || scope === 'docs'){
+    h += '<h2>Dokumentenübersicht</h2>' + tbl(['Datum','Titel','Kategorie','Datei','Notiz'],
+      sortD(byV(db.docs)).map(d => [fDate(d.date), d.title, d.category, d.fileName || '–', d.notes]));
+  }
+  p.innerHTML = h;
+  sheet('<h2>Bericht bereit</h2>' +
+    '<div class="lead">Unten die Vorschau. „Drucken" öffnet den Systemdialog – dort „Als PDF sichern" wählen.</div>' +
+    '<div class="preview">' + h + '</div>' +
+    '<div class="actions"><button class="btn ghost" data-act="close-sheet">Schliessen</button>' +
+    '<button class="btn p" data-act="print-now">Drucken / Als PDF</button></div>' +
+    '<div class="hint" style="margin-top:10px;color:var(--muted);font-size:12.5px">Erscheint kein Druckdialog, ist die Vorschau-Umgebung eingeschränkt. Auf ridepilot.ch funktioniert er normal.</div>');
+}
+
+/* --- Einstellungen --- */
+function vSettings(){
+  const s = db.settings;
+  let h = head('Einstellungen', 'Darstellung, Einheiten, Sicherheit');
+  h += '<div class="card"><div class="card-h"><span class="eyebrow">Darstellung</span></div>' +
+    '<div class="seg" role="group">' + ['system','light','dark'].map(t =>
+      '<button data-act="theme" data-arg="' + t + '" aria-pressed="' + (s.theme === t) + '">' +
+      ({ system:'System', light:'Hell', dark:'Dunkel' }[t]) + '</button>').join('') + '</div>' +
+    '<div class="card-h" style="margin:18px 0 10px"><span class="eyebrow">Einheiten</span></div>' +
+    '<div class="seg">' + ['km','mi'].map(u =>
+      '<button data-act="units" data-arg="' + u + '" aria-pressed="' + (s.units === u) + '">' +
+      (u === 'km' ? 'Kilometer' : 'Meilen') + '</button>').join('') + '</div></div>';
+  h += '<div class="list" style="margin-top:14px">' +
+    rowHTML({ act:'lang', t:'Sprache', s:'Deutsch (Schweiz)', v:'DE', icon:I.doc }) +
+    rowHTML({ act:'jbl-set', t:'JBL Portable Verknüpfung', s:s.jbl ? s.jbl : 'Noch kein Link hinterlegt', icon:I.speaker }) +
+    rowHTML({ act:'pin-change', t:'PIN ändern', s:s.pinChanged ? 'Eigener PIN aktiv' : 'Standard-PIN 1234 – bitte ändern', icon:I.lock, tone:s.pinChanged ? '' : 'w' }) +
+    rowHTML({ act:'go', arg:'backup', t:'Backup und Export', s:'Sichern, wiederherstellen, PDF', icon:I.backup }) +
+    rowHTML({ act:'manager', t:'Managerbereich', s:'PIN erforderlich', icon:I.shield, tone:'d' }) + '</div>';
+  h += '<div class="card" style="margin-top:14px"><div class="card-h"><span class="eyebrow">Datenschutz</span></div>' +
+    '<div style="color:var(--muted);font-size:14px">Alle Daten liegen ausschliesslich auf diesem Gerät. Es gibt keine Konten, keine Server-Synchronisation und keine Analyse-Tools. Damit erhebt RidePilot keine Personendaten im Sinne von DSG und DSGVO – ein Backup ist deshalb deine Verantwortung.</div>' +
+    '<button class="btn wide ghost" style="margin-top:14px" data-act="go" data-arg="backup">Jetzt Backup erstellen</button></div>';
+  h += '<div class="empty" style="padding:26px 8px"><div style="font-size:12px">RidePilot v1.0 · ridepilot.ch</div></div>';
+  return h;
+}
+
+/* --- Backup --- */
+function vBackup(){
+  let h = head('Backup', 'Sichern und wiederherstellen');
+  const size = new Blob([JSON.stringify(db)]).size;
+  h += '<div class="card"><div class="card-h"><span class="eyebrow">Datenbestand</span></div>' +
+    '<div class="stats"><div class="stat"><div class="k">Fahrzeuge</div><div class="v num">' + db.vehicles.length + '</div></div>' +
+    '<div class="stat"><div class="k">Fahrten</div><div class="v num">' + db.trips.length + '</div></div>' +
+    '<div class="stat"><div class="k">Wartungen</div><div class="v num">' + db.maint.length + '</div></div>' +
+    '<div class="stat"><div class="k">Dokumente</div><div class="v num">' + db.docs.length + '</div></div></div>' +
+    '<div style="color:var(--muted);font-size:13px;margin-top:12px">Grösse ' + (size / 1024).toFixed(0) + ' KB</div></div>';
+  h += '<div class="card"><div class="card-h"><span class="eyebrow">Sichern</span></div>' +
+    '<div style="color:var(--muted);font-size:14px;margin-bottom:14px">Eine JSON-Datei mit allen Fahrzeugen, Fahrten, Wartungen und Dokumenten. Bewahre sie ausserhalb des Geräts auf.</div>' +
+    '<button class="btn p wide" data-act="exp-json">Backup herunterladen</button>' +
+    '<button class="btn wide ghost" style="margin-top:10px" data-act="exp-csv">Fahrten als CSV</button>' +
+    '<button class="btn wide ghost" style="margin-top:10px" data-act="go" data-arg="pdf">PDF-Bericht erstellen</button></div>';
+  h += '<div class="card"><div class="card-h"><span class="eyebrow">Wiederherstellen</span></div>' +
+    '<div style="color:var(--muted);font-size:14px;margin-bottom:14px">Ein Import ersetzt den gesamten aktuellen Bestand. Der Managerbereich fragt vorher nach dem PIN.</div>' +
+    '<button class="btn wide d" data-act="import-start">Backup einspielen</button></div>';
+  return h;
+}
+let lastExport = null;
+function download(name, content, mime){
+  lastExport = { name, content, mime };
+  const kb = (content.length / 1024).toFixed(0);
+  const preview = content.length > 60000
+    ? content.slice(0, 60000) + '\n\n… gekürzt. Vollständig nur über den Download.'
+    : content;
+  sheet('<h2>Datei bereit</h2><div class="lead">' + esc(name) + ' · ' + kb + ' KB</div>' +
+    '<button class="btn p wide" data-act="dl-now">Herunterladen</button>' +
+    '<button class="btn wide ghost" style="margin-top:10px" data-act="dl-copy">Inhalt kopieren</button>' +
+    '<div class="f" style="margin-top:16px"><label>Inhalt – falls der Download blockiert wird</label>' +
+    '<textarea readonly style="min-height:160px;font-family:var(--font-data);font-size:11px">' + esc(preview) + '</textarea></div>' +
+    '<button class="btn wide ghost" data-act="close-sheet">Schliessen</button>');
+}
+function doDownload(){
+  if (!lastExport) return;
+  try{
+    const b = new Blob([lastExport.content], { type: lastExport.mime });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(b); a.download = lastExport.name;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    toast('Download gestartet: ' + lastExport.name);
+  } catch(e){ toast('Download blockiert – Inhalt unten kopieren.'); }
+}
+
+/* --- Manager --- */
+function vManager(){
+  let h = head('Managerbereich', 'Geschützte Aktionen', '<span class="badge bad">PIN</span>');
+  h += '<div class="card"><div class="card-h"><span class="eyebrow">Fahrzeuge</span></div>' +
+    (db.vehicles.length ? '<div class="list" style="box-shadow:none;border:none">' + db.vehicles.map(v =>
+      rowHTML({ act:'veh-del', id:v.id, t:v.name || (v.make + ' ' + v.model), s:'Löschen inkl. Fahrten, Wartungen, Dokumente', icon:I.scoot, tone:'d' })).join('') + '</div>'
+      : '<div style="color:var(--muted);font-size:14px">Keine Fahrzeuge.</div>') + '</div>';
+  h += '<div class="card"><div class="card-h"><span class="eyebrow">Daten</span></div>' +
+    '<button class="btn wide ghost" data-act="import-start">Backup wiederherstellen</button>' +
+    '<button class="btn wide d" style="margin-top:10px" data-act="reset">Datenbank zurücksetzen</button></div>';
+  h += '<div class="card"><div class="card-h"><span class="eyebrow">Entwickleroptionen</span></div>' +
+    '<button class="btn wide ghost" data-act="seed">Demodaten einfügen</button>' +
+    '<button class="btn wide ghost" style="margin-top:10px" data-act="raw">Rohdaten anzeigen</button>' +
+    '<div style="color:var(--muted);font-size:13px;margin-top:12px">Speicher: ' + (window.storage ? 'App-Speicher' : 'Gerätespeicher des Browsers') + '</div></div>';
+  return h;
+}
+let managerOK = false;
+function askPin(then){
+  let buf = '';
+  const draw = () => { const d = document.querySelectorAll('.pindots i'); d.forEach((x, i) => x.classList.toggle('on', i < buf.length)); };
+  sheet('<h2>PIN eingeben</h2><div class="lead">Der Managerbereich ist geschützt.</div>' +
+    '<div class="pindots"><i></i><i></i><i></i><i></i></div>' +
+    '<div class="pinpad">' + [1,2,3,4,5,6,7,8,9].map(n => '<button data-pin="' + n + '">' + n + '</button>').join('') +
+    '<button data-pin="del">←</button><button data-pin="0">0</button><button data-act="close-sheet">Weg</button></div>');
+  document.querySelector('.sheet').addEventListener('click', e => {
+    const b = e.target.closest('[data-pin]'); if (!b) return;
+    const k = b.dataset.pin;
+    if (k === 'del') buf = buf.slice(0, -1); else if (buf.length < 4) buf += k;
+    draw();
+    if (buf.length === 4){
+      if (buf === db.settings.pin){ managerOK = true; closeSheet(); then(); }
+      else { buf = ''; draw(); toast('Falscher PIN'); }
+    }
+  });
+}
+
+/* --- Onboarding --- */
+function vWelcome(){
+  return '<div style="padding:8vh 0 0">' +
+    '<div class="brand" style="padding-left:0"><span class="m">R</span><span class="n">RidePilot</span></div>' +
+    '<h1 class="display" style="font-size:38px;font-weight:800;line-height:1.05;margin:18px 0 12px">Dein Roller,<br>vollständig dokumentiert.</h1>' +
+    '<p style="color:var(--muted);font-size:16px;max-width:38ch">Kilometerstand, Fahrtenbuch, Wartungsintervalle, Police und Rechnungen. Offline nutzbar, alles bleibt auf deinem Gerät.</p>' +
+    '<div class="list" style="margin:26px 0">' +
+      rowHTML({ act:'noop', t:'Wartung im Blick', s:'Intervalle nach Monaten und ' + U(), icon:I.wrench, tone:'g' }) +
+      rowHTML({ act:'noop', t:'Alles offline', s:'Kein Konto, keine Cloud, kein Tracking', icon:I.shield, tone:'g' }) +
+      rowHTML({ act:'noop', t:'Bericht als PDF', s:'Für Werkstatt, Käufer oder Versicherung', icon:I.pdf, tone:'g' }) +
+    '</div>' +
+    '<button class="btn p wide" data-act="veh-new">Ersten Roller anlegen</button>' +
+    '<div class="empty" style="padding:22px 0"><div style="font-size:12px">Vorbelegt für Volta VSX · später beliebig viele Fahrzeuge</div></div></div>';
+}
+
+/* ---------- 8. Fahrmodus mit GPS-Aufzeichnung (Signature) --- */
+let rideT, rideStart, wake = null, watchId = null, rideTrack = [], rideKm = 0, rideSpeed = 0, gpsState = 'aus';
+function rideOn(){
+  const v = veh(); if (!v) return;
+  rideStart = Date.now(); rideTrack = []; rideKm = 0; rideSpeed = 0; gpsState = 'suche';
+  const r = $('#ride');
+  r.innerHTML = '<div class="live"><span class="dot"></span>Fahrmodus aktiv</div>' +
+    '<div class="clock num" id="ride-clock">0:00</div>' +
+    '<div class="ridestats">' +
+      '<div><div class="k">Strecke</div><div class="v num" id="ride-km">0.0</div><div class="u">' + U() + '</div></div>' +
+      '<div><div class="k">Tempo</div><div class="v num" id="ride-spd">–</div><div class="u">' + (db.settings.units === 'mi' ? 'mph' : 'km/h') + '</div></div>' +
+    '</div>' +
+    '<div class="meta" id="ride-gps">GPS wird gesucht …</div>' +
+    '<div class="meta">' + esc(v.name || (v.make + ' ' + v.model)) + ' · ' + esc(v.plate || '') + '</div>' +
+    '<div class="hold" id="ride-hold"><span class="ring"></span><span>Halten<br>zum Beenden</span></div>';
+  r.classList.add('on');
+  clearInterval(rideT);
+  rideT = setInterval(() => {
+    const s = Math.floor((Date.now() - rideStart) / 1000);
+    const el = document.getElementById('ride-clock');
+    if (el) el.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }, 500);
+  if (navigator.wakeLock) navigator.wakeLock.request('screen').then(w => wake = w).catch(() => {});
+  startGPS();
+  bindHold();
+}
+function startGPS(){
+  const g = document.getElementById('ride-gps');
+  if (!navigator.geolocation){
+    gpsState = 'fehlt'; if (g) g.textContent = 'Dieses Gerät liefert keine Standortdaten.'; return;
+  }
+  watchId = navigator.geolocation.watchPosition(pos => {
+    const p = { lat:+pos.coords.latitude.toFixed(5), lng:+pos.coords.longitude.toFixed(5), t:Date.now() };
+    if (pos.coords.accuracy > 60) return;                    // grobe Messungen verwerfen
+    const last = rideTrack[rideTrack.length - 1];
+    if (last && dist(last, p) < 8) return;                   // Stillstand nicht mitschreiben
+    if (last) rideKm += dist(last, p) / 1000;
+    rideTrack.push(p);
+    rideSpeed = pos.coords.speed != null && pos.coords.speed >= 0 ? pos.coords.speed * 3.6 : rideSpeed;
+    gpsState = 'aktiv';
+    const km = document.getElementById('ride-km'), sp = document.getElementById('ride-spd'), gg = document.getElementById('ride-gps');
+    if (km) km.textContent = toU(rideKm).toFixed(1);
+    if (sp) sp.textContent = rideSpeed ? Math.round(toU(rideSpeed)) : '–';
+    if (gg) gg.textContent = 'GPS aktiv · ' + rideTrack.length + ' Punkte · ±' + Math.round(pos.coords.accuracy) + ' m';
+  }, err => {
+    gpsState = 'verweigert';
+    const gg = document.getElementById('ride-gps');
+    if (gg) gg.textContent = err.code === 1
+      ? 'Standort nicht freigegeben – nur Zeit wird erfasst.'
+      : 'Kein GPS-Empfang – nur Zeit wird erfasst.';
+  }, { enableHighAccuracy:true, maximumAge:2000, timeout:15000 });
+}
+function bindHold(){
+  const h = document.getElementById('ride-hold'); if (!h) return;
+  let t0 = 0, raf;
+  const step = () => {
+    const p = Math.min(100, (Date.now() - t0) / 2000 * 100);
+    h.style.setProperty('--p', p);
+    if (p >= 100) return rideOff();
+    raf = requestAnimationFrame(step);
+  };
+  const start = e => { e.preventDefault(); t0 = Date.now(); step(); };
+  const stop = () => { cancelAnimationFrame(raf); h.style.setProperty('--p', 0); };
+  h.addEventListener('pointerdown', start); h.addEventListener('pointerup', stop);
+  h.addEventListener('pointerleave', stop); h.addEventListener('pointercancel', stop);
+}
+function rideOff(){
+  clearInterval(rideT);
+  if (watchId != null){ navigator.geolocation.clearWatch(watchId); watchId = null; }
+  $('#ride').classList.remove('on'); $('#ride').innerHTML = '';
+  if (wake){ try { wake.release(); } catch(e){} wake = null; }
+  const min = Math.round((Date.now() - rideStart) / 60000);
+  const km = rideTrack.length > 1 ? trackLength(rideTrack) : 0;
+  if (min < 1 && km < 0.1) return toast('Fahrt zu kurz – nichts erfasst.');
+  const track = rideTrack.slice();
+  tripSheet(null, { duration: min, km, track });
+  toast(km ? 'Fahrt beendet · ' + toU(km).toFixed(1) + ' ' + U() + ' aufgezeichnet' : 'Fahrt beendet · ' + min + ' Min.');
+}
+
+/* ---------- 9. Render ------------------------------------ */
+function render(){
+  applyTheme();
+  const app = $('#app');
+  if (!db.settings.onboarded && !db.vehicles.length){
+    app.innerHTML = '<div class="shell"><div class="main">' + vWelcome() + '</div></div>';
+    return;
+  }
+  const body = ({
+    dashboard:vDashboard, vehicles:vVehicles, trips:vTrips, maintenance:vMaint,
+    docs:vDocs, pdf:vPdf, settings:vSettings, backup:vBackup, manager:vManager
+  }[view] || vDashboard)();
+
+  const side = '<nav class="side"><div class="brand"><span class="m">R</span><span class="n">RidePilot</span></div>' +
+    NAV.map(([k, l, i]) => '<button class="nav" data-act="go" data-arg="' + k + '" aria-current="' + (view === k) + '">' + svg(i, 20) + '<span>' + l + '</span></button>').join('') +
+    '<div style="flex:1"></div><button class="btn p" data-act="ride-on" style="margin:0 6px">' + svg(I.bolt, 18) + ' Fahrmodus</button></nav>';
+
+  const tab = '<nav class="tabbar">' + TABS.map(([k, l, i]) =>
+    '<button class="tab" data-act="' + (k === 'more' ? 'more' : 'go') + '" data-arg="' + k + '" aria-current="' +
+    (view === k || (k === 'more' && ['vehicles','pdf','settings','backup','manager'].includes(view))) + '">' + svg(i, 22) + '<span>' + l + '</span></button>').join('') + '</nav>';
+
+  app.innerHTML = '<div class="shell">' + side + '<main class="main">' + body + '</main></div>' + tab;
+  window.scrollTo(0, 0);
+}
+function go(v){ view = v; render(); }
+
+/* ---------- 10. Aktionen --------------------------------- */
+document.addEventListener('click', async e => {
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const a = el.dataset.act, id = el.dataset.id, arg = el.dataset.arg;
+
+  switch (a){
+    case 'close-sheet': closeSheet(); break;
+    case 'noop': break;
+    case 'go': closeSheet(); go(arg); break;
+    case 'more': sheet('<h2>Mehr</h2><div class="list" style="box-shadow:none;border:none">' +
+        [['vehicles','Roller',I.scoot],['pdf','PDF-Bericht',I.pdf],['settings','Einstellungen',I.gear],['backup','Backup',I.backup]]
+        .map(([k, l, i]) => rowHTML({ act:'go', arg:k, t:l, icon:i })).join('') + '</div>'); break;
+
+    case 'veh-new': vehSheet(); break;
+    case 'veh-open': vehSheet(id); break;
+    case 'veh-save': await vehSave(id); break;
+    case 'veh-activate': db.activeId = id; save(); closeSheet(); go('dashboard'); toast('Aktiver Roller gewechselt'); break;
+    case 'veh-del': {
+      const v = db.vehicles.find(x => x.id === id); if (!v) break;
+      ask('Fahrzeug löschen?', (v.name || v.make) + ' samt Fahrten, Wartungen und Dokumenten wird unwiderruflich entfernt.', 'Endgültig löschen', () => {
+        db.vehicles = db.vehicles.filter(x => x.id !== id);
+        db.trips = db.trips.filter(t => t.vehicleId !== id);
+        db.maint = db.maint.filter(m => m.vehicleId !== id);
+        db.docs  = db.docs.filter(d => d.vehicleId !== id);
+        if (db.activeId === id) db.activeId = db.vehicles[0] ? db.vehicles[0].id : null;
+        save(); render(); toast('Fahrzeug gelöscht');
+      });
+      break;
+    }
+    case 'confirm-yes': { const f = pendingConfirm; pendingConfirm = null; closeSheet(); if (f) f(); break; }
+
+    case 'trip-new': tripSheet(); break;
+    case 'trip-open': tripSheet(id); break;
+    case 'trip-save': tripSave(id); break;
+    case 'trip-del': {
+      const t = db.trips.find(x => x.id === id); const v = veh();
+      if (t && v) v.odo = Math.max(0, (v.odo || 0) - (+t.distance || 0));
+      db.trips = db.trips.filter(x => x.id !== id); save(); closeSheet(); render(); toast('Fahrt gelöscht'); break;
+    }
+    case 'maint-new': maintSheet(); break;
+    case 'maint-new-type': maintSheet(null, arg); break;
+    case 'maint-open': maintSheet(id); break;
+    case 'maint-save': maintSave(id); break;
+    case 'maint-del': db.maint = db.maint.filter(x => x.id !== id); save(); closeSheet(); render(); toast('Eintrag gelöscht'); break;
+
+    case 'doc-new': docSheet(); break;
+    case 'doc-open': docSheet(id); break;
+    case 'doc-save': await docSave(id); break;
+    case 'doc-del': db.docs = db.docs.filter(x => x.id !== id); save(); closeSheet(); render(); toast('Dokument gelöscht'); break;
+
+    case 'odo-set': {
+      const v = veh();
+      sheet('<h2>Kilometerstand</h2><div class="lead">Aktueller Stand laut Tacho.</div>' +
+        fld('o-km','Stand (' + U() + ')', Math.round(toU(v.odo || 0)), '', 'number') +
+        '<div class="actions"><button class="btn ghost" data-act="close-sheet">Abbrechen</button>' +
+        '<button class="btn p" data-act="odo-save">Übernehmen</button></div>');
+      break;
+    }
+    case 'odo-save': { const v = veh(); v.odo = Math.round(fromU(+val('o-km') || 0)); save(); closeSheet(); render(); toast('Stand aktualisiert'); break; }
+
+    case 'ride-on': closeSheet(); rideOn(); break;
+    case 'jbl': {
+      const u = db.settings.jbl;
+      if (!u) { toast('Bitte zuerst den JBL-Link in den Einstellungen hinterlegen.'); go('settings'); break; }
+      window.location.href = u; break;
+    }
+    case 'jbl-set':
+      sheet('<h2>JBL Portable öffnen</h2>' +
+        '<div class="lead">Hinterlege den Link, mit dem die JBL-App auf deinem Gerät startet. Prüfe ihn einmal – App-Links unterscheiden sich je nach Version.</div>' +
+        fld('j-url','Link oder App-Schema', db.settings.jbl || '', 'jblportable://') +
+        '<div class="hint" style="margin-top:-6px">Alternativ ein normaler Store-Link. Auf iOS funktionieren App-Schemata nur, wenn die App installiert ist.</div>' +
+        '<div class="actions"><button class="btn ghost" data-act="close-sheet">Abbrechen</button>' +
+        '<button class="btn p" data-act="jbl-save">Speichern</button></div>');
+      break;
+    case 'jbl-save': db.settings.jbl = val('j-url'); save(); closeSheet(); render(); toast('Verknüpfung gespeichert'); break;
+
+    case 'theme': db.settings.theme = arg; save(); render(); break;
+    case 'units': db.settings.units = arg; save(); render(); break;
+    case 'lang': toast('Weitere Sprachen folgen in Phase 11.'); break;
+
+    case 'pin-change':
+      sheet('<h2>PIN ändern</h2><div class="lead">Vier Ziffern. Schützt den Managerbereich.</div>' +
+        fld('p-old','Aktueller PIN', '', '1234') + fld('p-new','Neuer PIN', '', '••••') +
+        '<div class="actions"><button class="btn ghost" data-act="close-sheet">Abbrechen</button>' +
+        '<button class="btn p" data-act="pin-save">Speichern</button></div>');
+      break;
+    case 'pin-save': {
+      if (val('p-old') !== db.settings.pin) return toast('Aktueller PIN stimmt nicht.');
+      const n = val('p-new');
+      if (!/^\d{4}$/.test(n)) return toast('Der neue PIN braucht genau vier Ziffern.');
+      db.settings.pin = n; db.settings.pinChanged = true; save(); closeSheet(); render(); toast('PIN geändert'); break;
+    }
+    case 'manager': managerOK ? go('manager') : askPin(() => go('manager')); break;
+
+    case 'pdf-all': buildPrint('all'); break;
+    case 'pdf-vehicle': buildPrint('vehicle'); break;
+    case 'pdf-maint': buildPrint('maint'); break;
+    case 'pdf-trips': buildPrint('trips'); break;
+    case 'pdf-docs': buildPrint('docs'); break;
+
+    case 'exp-json': download('ridepilot-backup-' + today() + '.json', JSON.stringify(db, null, 2), 'application/json'); break;
+    case 'exp-csv': {
+      const rows = [['Datum','Start','Ziel','Distanz ' + U(),'Dauer Min','Notizen']]
+        .concat(sortD(byV(db.trips)).map(t => [t.date, t.from, t.to, Math.round(toU(+t.distance || 0)), t.duration, (t.notes || '').replace(/[\r\n;]/g, ' ')]));
+      download('ridepilot-fahrten-' + today() + '.csv', '\uFEFF' + rows.map(r => r.join(';')).join('\n'), 'text/csv'); break;
+    }
+    case 'import-start':
+      if (!managerOK) { askPin(() => doImport()); } else doImport();
+      break;
+    case 'reset':
+      ask('Datenbank zurücksetzen?', 'Alle Fahrzeuge, Fahrten, Wartungen und Dokumente werden gelöscht. Nur ein Backup macht das rückgängig.', 'Alles löschen', () => {
+        db = fresh(); managerOK = false; save(); go('dashboard'); toast('Datenbank zurückgesetzt');
+      });
+      break;
+    case 'print-now': try { window.print(); } catch(e){ toast('Druckdialog gesperrt – bitte auf ridepilot.ch öffnen.'); } break;
+    case 'dl-now': doDownload(); break;
+    case 'dl-copy':
+      try { await navigator.clipboard.writeText(lastExport.content); toast('In die Zwischenablage kopiert'); }
+      catch(e){ toast('Kopieren gesperrt – Text unten von Hand markieren.'); }
+      break;
+    case 'seed': seed(); break;
+    case 'raw': sheet('<h2>Rohdaten</h2><div class="lead">Nur lesen.</div><div class="f"><textarea readonly style="min-height:320px;font-family:var(--font-data);font-size:12px">' +
+        esc(JSON.stringify(db, null, 2)) + '</textarea></div><button class="btn wide ghost" data-act="close-sheet">Schliessen</button>'); break;
+  }
+});
+function doImport(){
+  closeSheet();
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'application/json';
+  inp.onchange = () => {
+    const f = inp.files[0]; if (!f) return toast('Keine Datei gewählt.');
+    const fr = new FileReader();
+    fr.onerror = () => toast('Datei konnte nicht gelesen werden.');
+    fr.onload = () => {
+      let d;
+      try { d = JSON.parse(fr.result); } catch(e){ return toast('Datei ist kein gültiges JSON.'); }
+      if (!d || !Array.isArray(d.vehicles)) return toast('Datei enthält kein RidePilot-Backup.');
+      ask('Backup einspielen?', d.vehicles.length + ' Fahrzeug(e), ' + (d.trips || []).length + ' Fahrten. Der aktuelle Bestand wird vollständig ersetzt.', 'Einspielen', () => {
+        db = Object.assign(fresh(), d); save(); go('dashboard'); toast('Backup wiederhergestellt');
+      });
+    };
+    fr.readAsText(f);
+  };
+  inp.click();
+  setTimeout(() => { if (!inp.files.length) toast('Dateiauswahl offen? In der Vorschau kann sie gesperrt sein.'); }, 4000);
+}
+function seed(){
+  const v = { id: uid(), name:'Volta', make:'Volta', model:'VSX', year:'2025', color:'Schwarz',
+    plate:'ZH 41287', vin:'', odo:1840, insurer:'Beispiel Versicherung', insuranceUntil: addMonths(today(), 7),
+    policy:'P-2026-0041', batteryHealth:'98', servicePartner:'Roller Center', notes:'', createdAt: today() };
+  db.vehicles.push(v); db.activeId = v.id; db.settings.onboarded = true;
+  db.maint.push({ id: uid(), vehicleId: v.id, type:'service', date: addMonths(today(), -10), odo:600, intervalMonths:12, intervalKm:3000, cost:180, shop:'Roller Center', notes:'Erstinspektion' });
+  db.maint.push({ id: uid(), vehicleId: v.id, type:'bremsen', date: addMonths(today(), -3), odo:1400, intervalMonths:12, intervalKm:5000, cost:95, shop:'Roller Center', notes:'Beläge vorne' });
+  const demoTrack = [];
+  for (let i = 0; i <= 40; i++){
+    demoTrack.push({ lat: +(47.4050 + i * 0.0016 + Math.sin(i / 5) * 0.0011).toFixed(5),
+                     lng: +(8.6100 + i * 0.0021 + Math.cos(i / 4) * 0.0014).toFixed(5), t: Date.now() });
+  }
+  [[-2,'Zuhause','Büro',12,22,demoTrack],[-5,'Büro','Zuhause',12,25,null],[-9,'Zuhause','See',31,48,null]].forEach(([d, f, t, km, min, tr]) => {
+    const dt = new Date(); dt.setDate(dt.getDate() + d);
+    const trip = { id: uid(), vehicleId: v.id, date: dt.toISOString().slice(0,10), from:f, to:t, distance:km, duration:String(min), notes:'' };
+    if (tr) trip.track = tr;
+    db.trips.push(trip);
+  });
+  db.docs.push({ id: uid(), vehicleId: v.id, title:'Versicherungspolice 2026', category:'Versicherung', date: addMonths(today(), -5), notes:'Teilkasko' });
+  save(); go('dashboard'); toast('Demodaten eingefügt');
+}
+
+/* ---------- 11. Start ------------------------------------ */
+/* Rückmeldung, sobald eine Datei gewählt wurde */
+document.addEventListener('change', e => {
+  const inp = e.target;
+  if (inp.id !== 'd-file' && inp.id !== 'v-photo') return;
+  const info = document.getElementById(inp.id + '-info');
+  const f = inp.files && inp.files[0];
+  if (info) info.textContent = f
+    ? 'Gewählt: ' + f.name + ' · ' + (f.size / 1024).toFixed(0) + ' KB'
+    : 'Keine Datei gewählt.';
+});
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheetOpen) closeSheet(); });
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (db.settings.theme === 'system') applyTheme(); });
+
+(async function init(){
+  const loaded = await store.get();
+  if (loaded) db = Object.assign(fresh(), loaded, { settings: Object.assign(fresh().settings, loaded.settings || {}) });
+  applyTheme(); render();
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>
