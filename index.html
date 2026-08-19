@@ -1269,7 +1269,8 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
   const loaded = await store.get();
   if (loaded) db = Object.assign(fresh(), loaded, { settings: Object.assign(fresh().settings, loaded.settings || {}) });
   applyTheme(); render();
-  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  const isLocalhost = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || isLocalhost)) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
 })();
