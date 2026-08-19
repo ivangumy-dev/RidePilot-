@@ -1,0 +1,46 @@
+{
+  "name": "ridepilot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "RidePilot \u2013 PWA zur Verwaltung eines Elektrorollers (Volta VSX)",
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && prisma db push && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "format": "prettier --write .",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "setup:owner": "node scripts/create-owner.mjs",
+    "cron:notifications": "node scripts/cron-notifications.mjs",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/client": "5.22.0",
+    "hash-wasm": "4.11.0",
+    "leaflet": "1.9.4",
+    "next": "14.2.15",
+    "pdf-lib": "1.17.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@types/leaflet": "1.9.12",
+    "@types/node": "20.14.10",
+    "@types/react": "18.3.3",
+    "@types/react-dom": "18.3.0",
+    "autoprefixer": "10.4.19",
+    "eslint": "8.57.0",
+    "eslint-config-next": "14.2.15",
+    "postcss": "8.4.39",
+    "prettier": "3.3.3",
+    "prisma": "5.22.0",
+    "tailwindcss": "3.4.6",
+    "typescript": "5.5.3"
+  },
+  "engines": {
+    "node": ">=18.18.0"
+  }
+}
