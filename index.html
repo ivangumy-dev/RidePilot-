@@ -1,1278 +1,1119 @@
 <!DOCTYPE html>
-<html lang="de-CH">
+<html lang="de">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<meta name="theme-color" content="#0A0D11">
+<title>RidePilot</title>
+<meta name="description" content="RidePilot – Fahrtenbuch, Restreichweite und Wartung für den Volta VSX.">
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0B0D10">
+<link rel="apple-touch-icon" href="./icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="description" content="RidePilot – Fahrtenbuch, Wartung und Dokumente für deinen Roller.">
-<link rel="manifest" href="manifest.json">
-<title>RidePilot</title>
+<meta name="apple-mobile-web-app-title" content="RidePilot">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+  /* Theme sofort setzen (vor dem ersten Paint), damit kein Flackern entsteht. */
+  (function () {
+    try {
+      var t = localStorage.getItem('rp-theme') || 'system';
+      var isDark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    } catch (e) {}
+  })();
+</script>
 <style>
-/* ---------- Tokens ---------- */
-:root{
-  --volt:#00C2A3; --volt-ink:#003B32;
-  --warn:#FF9F0A; --danger:#FF453A; --ok:#30D158;
-  --r-card:22px; --r-inner:16px; --r-field:14px;
-  --tap:52px;
-  --font-display:ui-rounded,"SF Pro Rounded","Hiragino Maru Gothic ProN",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --font-body:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
-  --font-data:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
-  --sat:env(safe-area-inset-top); --sab:env(safe-area-inset-bottom);
-}
-html[data-theme="light"]{
-  --bg:#EFF2F6; --surface:#FFFFFF; --surface-2:#F6F8FA;
-  --text:#0C1116; --muted:#68737F; --line:rgba(11,17,22,.10);
-  --shadow:0 1px 2px rgba(11,17,22,.05),0 8px 24px rgba(11,17,22,.06);
-}
-html[data-theme="dark"]{
-  --bg:#080B0E; --surface:#141A20; --surface-2:#1B222A;
-  --text:#EEF2F6; --muted:#8D99A7; --line:rgba(255,255,255,.10);
-  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35);
-}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%}
-body{
-  background:var(--bg);color:var(--text);font-family:var(--font-body);
-  font-size:16px;line-height:1.45;overscroll-behavior-y:none;
-  -webkit-font-smoothing:antialiased;
-}
-h1,h2,h3,.display{font-family:var(--font-display);letter-spacing:-.02em;margin:0}
-button,input,select,textarea{font:inherit;color:inherit}
-a{color:var(--volt)}
-.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
-.mono{font-family:var(--font-data);letter-spacing:.02em}
+  :root {
+    --bg: #F5F6F8;
+    --surface: #FFFFFF;
+    --surface-alt: #EEF0F3;
+    --text: #14171A;
+    --text-2: #667085;
+    --text-3: #98A1AC;
+    --border: #E3E6EA;
+    --accent: #0E7C86;
+    --accent-strong: #095A62;
+    --accent-tint: #E4F2F1;
+    --warn: #C97A1F;
+    --warn-tint: #FBF0DF;
+    --danger: #C23C31;
+    --danger-tint: #FBE7E5;
+    --shadow: 0 1px 2px rgba(16,24,32,0.05), 0 8px 24px rgba(16,24,32,0.07);
+    --radius-lg: 22px;
+    --radius-md: 16px;
+    --radius-sm: 11px;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-top: env(safe-area-inset-top, 0px);
+  }
+  [data-theme="dark"] {
+    --bg: #0B0D10;
+    --surface: #16191D;
+    --surface-alt: #1E2227;
+    --text: #F2F4F6;
+    --text-2: #9AA2AC;
+    --text-3: #6C7580;
+    --border: #262B31;
+    --accent: #29AEB6;
+    --accent-strong: #52C4CB;
+    --accent-tint: #16292A;
+    --warn: #E4A852;
+    --warn-tint: #2B2211;
+    --danger: #E6675C;
+    --danger-tint: #2E1815;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 28px rgba(0,0,0,0.45);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 16px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: none;
+  }
+  h1, h2, h3, .num {
+    font-family: 'Space Grotesk', 'Manrope', sans-serif;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .num { font-variant-numeric: tabular-nums; }
+  button, input, select, textarea { font-family: inherit; color: inherit; }
+  button { cursor: pointer; }
+  a { color: var(--accent); }
+  ::selection { background: var(--accent); color: white; }
 
-/* ---------- Layout ---------- */
-#app{min-height:100%;display:flex;flex-direction:column}
-.shell{display:flex;flex:1;min-height:0}
-.side{display:none}
-.main{flex:1;min-width:0;padding:calc(var(--sat) + 8px) 16px calc(var(--sab) + 96px);max-width:920px;margin:0 auto;width:100%}
-@media(min-width:900px){
-  .shell{gap:20px;padding:0 20px}
-  .side{display:flex;flex-direction:column;gap:4px;width:236px;padding:24px 0;position:sticky;top:0;height:100vh}
-  .main{padding:24px 0 64px}
-  .tabbar{display:none}
-}
+  #app { max-width: 560px; margin: 0 auto; min-height: 100vh; position: relative; padding-bottom: calc(78px + var(--safe-bottom)); }
 
-/* ---------- Header ---------- */
-.topbar{display:flex;align-items:center;gap:12px;margin:6px 0 18px}
-.topbar .title{font-size:30px;font-weight:800;line-height:1.1}
-.topbar .sub{color:var(--muted);font-size:13px;margin-top:2px}
-.spacer{flex:1}
+  .topbar {
+    padding: calc(18px + var(--safe-top)) 20px 8px;
+    display: flex; align-items: baseline; justify-content: space-between;
+  }
+  .topbar .greeting { font-size: 22px; font-weight: 700; }
+  .topbar .date { font-size: 13px; color: var(--text-2); font-weight: 500; }
 
-/* ---------- Cards ---------- */
-.card{background:var(--surface);border-radius:var(--r-card);padding:18px;box-shadow:var(--shadow);border:1px solid var(--line)}
-.card + .card{margin-top:14px}
-.card-h{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.card-h h2{font-size:17px;font-weight:700}
-.eyebrow{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
-.grid{display:grid;gap:14px}
-@media(min-width:620px){.grid.two{grid-template-columns:1fr 1fr}}
+  .view { display: none; padding: 4px 16px 24px; animation: fadeIn .25s ease; }
+  .view.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px);} to { opacity: 1; transform: translateY(0);} }
+  @media (prefers-reduced-motion: reduce) { .view { animation: none; } * { transition: none !important; animation-duration: .01ms !important; } }
 
-/* ---------- Signature: Odometer strip ---------- */
-.odo{position:relative;overflow:hidden;background:linear-gradient(160deg,var(--volt) 0%,#0E9E8B 58%,#0B7F73 100%);color:#00201B;border:none}
-.odo .ticks{position:absolute;inset:auto 0 0 0;height:26px;opacity:.35;
-  background-image:repeating-linear-gradient(90deg,rgba(0,32,27,.9) 0 2px,transparent 2px 14px);}
-.odo .plate{display:inline-block;background:rgba(0,32,27,.14);border:1px solid rgba(0,32,27,.25);
-  padding:3px 10px;border-radius:8px;font-size:12px;font-weight:700}
-.odo .big{font-family:var(--font-display);font-size:clamp(44px,13vw,62px);font-weight:800;line-height:1;margin-top:10px}
-.odo .big small{font-size:.32em;font-weight:700;margin-left:6px;opacity:.7}
-.odo .row{display:flex;align-items:flex-end;gap:14px;position:relative;z-index:1}
-.odo .thumb{width:66px;height:66px;border-radius:18px;object-fit:cover;background:rgba(0,32,27,.15);flex:none}
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow);
+  }
+  .card-tight { padding: 14px 16px; }
+  .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); margin: 22px 4px 10px; }
+  .section-title:first-child { margin-top: 4px; }
 
-/* ---------- Lists ---------- */
-.list{background:var(--surface);border-radius:var(--r-card);border:1px solid var(--line);overflow:hidden;box-shadow:var(--shadow)}
-.row{display:flex;align-items:center;gap:14px;padding:14px 16px;min-height:var(--tap);width:100%;background:none;border:0;text-align:left;cursor:pointer}
-.row + .row{border-top:1px solid var(--line)}
-.row:active{background:var(--surface-2)}
-.row .grow{flex:1;min-width:0}
-.row .t{font-weight:600;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.row .s{color:var(--muted);font-size:13px;margin-top:1px}
-.row .v{color:var(--muted);font-size:14px;flex:none}
-.chev{color:var(--muted);flex:none}
-.ico{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:none;background:var(--surface-2);color:var(--muted)}
-.ico.g{background:rgba(0,194,163,.14);color:var(--volt)}
-.ico.w{background:rgba(255,159,10,.15);color:var(--warn)}
-.ico.d{background:rgba(255,69,58,.15);color:var(--danger)}
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    border: none; border-radius: var(--radius-md);
+    padding: 14px 18px; font-size: 16px; font-weight: 700;
+    width: 100%; transition: transform .12s ease, opacity .12s ease;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-secondary { background: var(--surface-alt); color: var(--text); }
+  .btn-danger { background: var(--danger); color: white; }
+  .btn-ghost { background: transparent; color: var(--accent); padding: 10px 6px; width: auto; }
+  .btn-sm { padding: 10px 14px; font-size: 14px; width: auto; }
+  .btn[disabled] { opacity: .45; pointer-events: none; }
+  .btn-row { display: flex; gap: 10px; }
+  .btn-row .btn { flex: 1; }
 
-/* ---------- Badges / stats ---------- */
-.badge{font-size:12px;font-weight:700;padding:4px 9px;border-radius:999px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
-.badge.ok{background:rgba(48,209,88,.16);color:#1B9C43}
-.badge.warn{background:rgba(255,159,10,.18);color:#B36B00}
-.badge.bad{background:rgba(255,69,58,.16);color:#D6342A}
-html[data-theme="dark"] .badge.ok{color:#5BE07E}
-html[data-theme="dark"] .badge.warn{color:#FFBE5C}
-html[data-theme="dark"] .badge.bad{color:#FF8079}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border-radius:var(--r-inner);overflow:hidden}
-.stat{background:var(--surface);padding:14px}
-.stat .k{font-size:12px;color:var(--muted);font-weight:600}
-.stat .v{font-family:var(--font-display);font-size:22px;font-weight:800;margin-top:2px}
+  .quick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+  .quick-btn {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);
+    padding: 14px 8px; display: flex; flex-direction: column; align-items: center; gap: 8px;
+    font-size: 12.5px; font-weight: 700; color: var(--text); box-shadow: var(--shadow);
+  }
+  .quick-btn svg { width: 22px; height: 22px; stroke: var(--accent); }
+  .quick-btn:active { transform: scale(0.96); }
 
-/* ---------- Buttons ---------- */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:var(--tap);
-  padding:0 20px;border-radius:999px;border:1px solid var(--line);background:var(--surface);
-  font-weight:650;cursor:pointer;transition:transform .12s ease,filter .12s ease}
-.btn:active{transform:scale(.975)}
-.btn.p{background:var(--volt);color:var(--volt-ink);border-color:transparent}
-.btn.d{background:rgba(255,69,58,.12);color:var(--danger);border-color:transparent}
-.btn.ghost{background:var(--surface-2)}
-.btn.wide{width:100%}
-.btn.sm{min-height:40px;padding:0 14px;font-size:14px}
-.quick{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-@media(min-width:620px){.quick{grid-template-columns:repeat(4,1fr)}}
-.qa{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:14px;border-radius:var(--r-inner);
-  background:var(--surface);border:1px solid var(--line);cursor:pointer;min-height:88px;justify-content:space-between}
-.qa:active{transform:scale(.98)}
-.qa .l{font-size:14px;font-weight:650;text-align:left}
-.fab{position:fixed;right:16px;bottom:calc(var(--sab) + 84px);z-index:40;width:58px;height:58px;border-radius:50%;
-  background:var(--volt);color:var(--volt-ink);border:0;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer;display:grid;place-items:center}
-@media(min-width:900px){.fab{bottom:28px}}
+  input[type=text], input[type=number], input[type=date], input[type=tel], select, textarea {
+    width: 100%; background: var(--surface-alt); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 12px 14px; font-size: 16px; color: var(--text);
+  }
+  input:focus, select:focus, textarea:focus, button:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 1px;
+  }
+  label { font-size: 13px; font-weight: 600; color: var(--text-2); display: block; margin: 12px 0 6px; }
+  label:first-child { margin-top: 0; }
 
-/* ---------- Tabbar / Sidebar ---------- */
-.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;
-  padding:6px 6px calc(var(--sab) + 6px);background:color-mix(in srgb,var(--surface) 88%,transparent);
-  backdrop-filter:saturate(180%) blur(20px);border-top:1px solid var(--line)}
-.tab{flex:1;background:none;border:0;padding:6px 2px;display:flex;flex-direction:column;align-items:center;gap:3px;
-  color:var(--muted);font-size:10.5px;font-weight:650;cursor:pointer;border-radius:12px}
-.tab[aria-current="true"]{color:var(--volt)}
-.nav{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:14px;background:none;border:0;
-  color:var(--muted);font-weight:600;cursor:pointer;width:100%;text-align:left}
-.nav[aria-current="true"]{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
-.brand{display:flex;align-items:center;gap:10px;padding:6px 14px 18px}
-.brand .m{width:34px;height:34px;border-radius:11px;background:var(--volt);color:var(--volt-ink);display:grid;place-items:center;font-family:var(--font-display);font-weight:800}
-.brand .n{font-family:var(--font-display);font-weight:800;font-size:19px}
+  .pill { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 100px; }
+  .pill-ok { background: var(--accent-tint); color: var(--accent-strong); }
+  .pill-warn { background: var(--warn-tint); color: var(--warn); }
+  .pill-danger { background: var(--danger-tint); color: var(--danger); }
 
-/* ---------- Sheet / modal ---------- */
-.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:60;opacity:0;transition:opacity .2s;backdrop-filter:blur(2px)}
-.scrim.on{opacity:1}
-.sheet{position:fixed;left:0;right:0;bottom:0;z-index:61;background:var(--surface);
-  border-radius:26px 26px 0 0;padding:8px 16px calc(var(--sab) + 20px);max-height:92vh;overflow:auto;
-  transform:translateY(100%);transition:transform .26s cubic-bezier(.32,.72,0,1);border:1px solid var(--line)}
-.sheet.on{transform:none}
-@media(min-width:700px){
-  .sheet{left:50%;right:auto;bottom:auto;top:50%;width:560px;border-radius:24px;padding:8px 22px 22px;
-    transform:translate(-50%,-46%) scale(.97);opacity:0;max-height:88vh}
-  .sheet.on{transform:translate(-50%,-50%);opacity:1}
-}
-.grab{width:38px;height:5px;border-radius:3px;background:var(--line);margin:6px auto 12px}
-.sheet h2{font-size:21px;font-weight:800;margin-bottom:4px}
-.sheet .lead{color:var(--muted);font-size:14px;margin-bottom:16px}
+  .banner { display: flex; gap: 12px; align-items: flex-start; background: var(--warn-tint); border: 1px solid transparent; border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 14px; }
+  .banner svg { width: 20px; height: 20px; stroke: var(--warn); flex-shrink: 0; margin-top: 1px; }
+  .banner p { margin: 0; font-size: 14px; font-weight: 600; color: var(--text); }
+  .banner button { margin-top: 8px; }
 
-/* ---------- Forms ---------- */
-.f{margin-bottom:14px}
-.f label{display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:6px}
-.f input,.f select,.f textarea{width:100%;min-height:var(--tap);padding:12px 14px;border-radius:var(--r-field);
-  background:var(--surface-2);border:1px solid transparent;outline:none}
-.f textarea{min-height:92px;resize:vertical}
-.f input:focus,.f textarea:focus,.f select:focus{border-color:var(--volt)}
-.f input:focus-visible,.f textarea:focus-visible{box-shadow:0 0 0 3px rgba(0,194,163,.25)}
-.f .hint{font-size:12px;color:var(--muted);margin-top:5px}
-.f2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.seg{display:flex;gap:4px;background:var(--surface-2);padding:4px;border-radius:14px}
-.seg button{flex:1;min-height:42px;border:0;background:none;border-radius:11px;font-weight:650;cursor:pointer;color:var(--muted)}
-.seg button[aria-pressed="true"]{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
-.actions{display:flex;gap:10px;margin-top:18px}
-.actions .btn{flex:1}
-.pinpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
-.pinpad button{min-height:60px;border-radius:18px;border:1px solid var(--line);background:var(--surface-2);
-  font-family:var(--font-display);font-size:22px;font-weight:700;cursor:pointer}
-.pindots{display:flex;gap:12px;justify-content:center;margin:18px 0 4px}
-.pindots i{width:14px;height:14px;border-radius:50%;background:var(--line)}
-.pindots i.on{background:var(--volt)}
+  /* Gauge */
+  .gauge-wrap { display: flex; flex-direction: column; align-items: center; padding-top: 4px; }
+  #gaugeFill { transition: stroke-dashoffset .7s cubic-bezier(.2,.8,.2,1), stroke .3s ease, opacity .3s ease; opacity: 0; }
+  .gauge-value { text-align: center; margin-top: -64px; }
+  .gauge-value .num { font-size: 46px; font-weight: 700; display: block; line-height: 1; }
+  .gauge-value .unit { font-size: 15px; font-weight: 700; color: var(--text-2); }
+  .gauge-value .label { font-size: 13px; color: var(--text-2); margin-top: 4px; font-weight: 600; }
+  .gauge-meta { text-align: center; font-size: 12px; color: var(--text-3); margin-top: 6px; font-weight: 500; }
 
-/* ---------- Route & Vorschau ---------- */
-.routebox{background:var(--surface-2);border-radius:var(--r-inner);padding:10px 10px 6px;margin-bottom:14px;
-  border:1px solid var(--line)}
-.routemeta{display:flex;justify-content:space-between;font-size:12px;font-weight:650;color:var(--muted);padding:4px 4px 2px}
-.preview{background:#fff;color:#111;border-radius:var(--r-inner);padding:16px;max-height:38vh;overflow:auto;
-  font-family:Georgia,serif;border:1px solid var(--line);margin-bottom:4px}
-.preview h1{font-size:19px;margin:0 0 4px}
-.preview h2{font-size:11px;text-transform:uppercase;letter-spacing:.1em;font-family:var(--font-body);
-  border-bottom:1px solid #222;padding-bottom:3px;margin:16px 0 6px}
-.preview table{width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:11.5px}
-.preview th{text-align:left;border-bottom:1px solid #222;padding:3px 4px;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em}
-.preview td{border-bottom:1px solid #ddd;padding:4px;vertical-align:top}
-.preview .meta{font-family:var(--font-body);font-size:11px;color:#555}
+  .calib-form { display: flex; gap: 8px; align-items: flex-end; margin-top: 16px; }
+  .calib-form > div { flex: 1; }
+  .calib-form label { margin: 0 0 6px; }
+  details.history { margin-top: 12px; }
+  details.history summary { font-size: 13px; font-weight: 700; color: var(--accent); cursor: pointer; list-style: none; }
+  details.history summary::-webkit-details-marker { display: none; }
+  .history-row { display: flex; justify-content: space-between; font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--border); color: var(--text-2); }
+  .history-row:last-child { border-bottom: none; }
 
-/* ---------- Empty / toast ---------- */
-.empty{text-align:center;padding:34px 18px;color:var(--muted)}
-.empty .e{font-family:var(--font-display);font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px}
-.toast{position:fixed;left:50%;bottom:calc(var(--sab) + 108px);transform:translate(-50%,20px);z-index:80;
-  background:var(--text);color:var(--bg);padding:12px 18px;border-radius:999px;font-weight:650;font-size:14px;
-  opacity:0;transition:.22s;pointer-events:none;max-width:88vw;text-align:center}
-.toast.on{opacity:1;transform:translate(-50%,0)}
+  .list-row { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--border); }
+  .list-row:last-child { border-bottom: none; }
+  .list-row .icon { width: 38px; height: 38px; border-radius: 10px; background: var(--surface-alt); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .list-row .icon svg { width: 18px; height: 18px; stroke: var(--accent); }
+  .list-row .main { flex: 1; min-width: 0; }
+  .list-row .title { font-weight: 700; font-size: 15px; }
+  .list-row .sub { font-size: 13px; color: var(--text-2); margin-top: 1px; }
+  .list-row .trail { font-size: 13px; color: var(--text-2); font-weight: 600; text-align: right; }
+  .empty { text-align: center; padding: 34px 12px; color: var(--text-2); }
+  .empty svg { width: 34px; height: 34px; stroke: var(--text-3); margin-bottom: 10px; }
+  .empty .t { font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .empty .s { font-size: 13.5px; }
 
-/* ---------- Ride mode (Signature) ---------- */
-#ride{position:fixed;inset:0;z-index:200;background:#04070A;color:#E8FFFA;display:none;
-  flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:28px;text-align:center}
-#ride.on{display:flex}
-#ride .live{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--volt)}
-#ride .dot{width:9px;height:9px;border-radius:50%;background:var(--volt);animation:pulse 1.6s infinite}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.8)}}
-#ride .clock{font-family:var(--font-display);font-size:clamp(64px,22vw,132px);font-weight:800;line-height:1;letter-spacing:-.03em}
-#ride .meta{color:#7FA69E;font-size:15px;margin-top:10px}
-#ride .ridestats{display:flex;gap:38px;margin-top:18px}
-#ride .ridestats .k{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E8078;font-weight:700}
-#ride .ridestats .v{font-family:var(--font-display);font-size:34px;font-weight:800;line-height:1.1;margin-top:2px}
-#ride .ridestats .u{font-size:12px;color:#7FA69E;font-weight:600}
-#ride .hold{margin-top:38px;position:relative;width:132px;height:132px;border-radius:50%;
-  border:2px solid rgba(0,194,163,.3);display:grid;place-items:center;cursor:pointer;user-select:none;
-  font-weight:700;font-size:14px;color:#9FD8CE}
-#ride .ring{position:absolute;inset:-2px;border-radius:50%;
-  background:conic-gradient(var(--volt) calc(var(--p,0)*1%),transparent 0);
-  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));
-          mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px))}
+  /* Bottom nav */
+  .tabbar {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border);
+    display: flex; justify-content: space-around;
+    padding: 8px 6px calc(8px + var(--safe-bottom));
+    max-width: 560px; margin: 0 auto;
+  }
+  .tab { background: none; border: none; display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--text-3); font-size: 10.5px; font-weight: 700; padding: 4px 10px; border-radius: 10px; flex: 1; }
+  .tab svg { width: 23px; height: 23px; stroke: var(--text-3); fill: none; stroke-width: 1.8; }
+  .tab.active { color: var(--accent); }
+  .tab.active svg { stroke: var(--accent); }
 
-/* ---------- Print ---------- */
-#print{display:none}
-@media print{
-  body{background:#fff;color:#000}
-  .shell,.tabbar,.fab,.scrim,.sheet,.toast,#ride{display:none !important}
-  #print{display:block;font-family:Georgia,"Times New Roman",serif;padding:0;color:#000}
-  #print h1{font-size:24pt;margin:0 0 2mm}
-  #print h2{font-size:12pt;margin:8mm 0 2mm;border-bottom:1.5pt solid #000;padding-bottom:1.5mm;
-    text-transform:uppercase;letter-spacing:.1em;font-family:Helvetica,Arial,sans-serif}
-  #print table{width:100%;border-collapse:collapse;font-size:9.5pt;font-family:Helvetica,Arial,sans-serif}
-  #print th{text-align:left;border-bottom:.75pt solid #000;padding:1.5mm 2mm;font-size:8pt;text-transform:uppercase;letter-spacing:.06em}
-  #print td{border-bottom:.25pt solid #bbb;padding:1.8mm 2mm;vertical-align:top}
-  #print .meta{font-family:Helvetica,Arial,sans-serif;font-size:9pt;color:#444;margin-bottom:1mm}
-  @page{margin:16mm}
-}
-@media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
+  /* Modal */
+  .modal-bg { position: fixed; inset: 0; background: rgba(10,12,14,0.5); z-index: 90; display: none; align-items: flex-end; }
+  .modal-bg.open { display: flex; }
+  .modal { background: var(--surface); width: 100%; max-width: 560px; margin: 0 auto; border-radius: 22px 22px 0 0; padding: 22px 20px calc(24px + var(--safe-bottom)); max-height: 86vh; overflow-y: auto; animation: slideUp .22s ease; }
+  @keyframes slideUp { from { transform: translateY(24px); opacity: .4; } to { transform: translateY(0); opacity: 1; } }
+  .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 4px; margin: 0 auto 16px; }
+  .modal h2 { font-size: 19px; margin-bottom: 4px; }
+  .modal .desc { font-size: 13.5px; color: var(--text-2); margin-bottom: 16px; }
+  .modal-close { position: absolute; top: 18px; right: 18px; background: var(--surface-alt); border: none; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .modal-close svg { width: 15px; height: 15px; stroke: var(--text-2); }
+
+  /* Toast */
+  #toast { position: fixed; top: calc(14px + var(--safe-top)); left: 50%; transform: translateX(-50%) translateY(-140%); background: var(--text); color: var(--bg); padding: 11px 18px; border-radius: 100px; font-size: 13.5px; font-weight: 700; z-index: 200; transition: transform .28s cubic-bezier(.2,.9,.3,1.2); box-shadow: var(--shadow); max-width: 88%; text-align: center; }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Ride mode (Sicherheitsmodus) */
+  #ridemode { position: fixed; inset: 0; background: var(--bg); z-index: 150; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+  #ridemode.open { display: flex; }
+  #ridemode .rm-label { font-size: 14px; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: .08em; }
+  #ridemode .rm-timer { font-size: 56px; font-weight: 700; font-family: 'Space Grotesk'; margin: 6px 0 26px; font-variant-numeric: tabular-nums; }
+  #ridemode .rm-dist { text-align: center; margin-bottom: 40px; }
+  #ridemode .rm-dist .num { font-size: 72px; font-weight: 700; line-height: 1; }
+  #ridemode .rm-dist .unit { font-size: 18px; color: var(--text-2); font-weight: 700; }
+  #ridemode .rm-gps { font-size: 12.5px; color: var(--text-3); margin-top: -30px; margin-bottom: 34px; font-weight: 600; }
+  #ridemode .rm-actions { width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 12px; }
+  #ridemode .rm-stop { background: var(--danger); color: white; border: none; border-radius: 100px; padding: 20px; font-size: 18px; font-weight: 800; width: 100%; }
+  #ridemode .rm-photo { background: var(--surface-alt); border: 1px solid var(--border); border-radius: 100px; padding: 15px; font-weight: 700; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  #ridemode .rm-photo svg { width: 18px; height: 18px; stroke: var(--text); }
+  #ridemode .rm-shots { font-size: 12.5px; color: var(--text-2); margin-top: 8px; font-weight: 600; }
+
+  .field-note { font-size: 12px; color: var(--text-3); margin-top: 6px; }
+  .switcher { display: flex; background: var(--surface-alt); border-radius: 12px; padding: 3px; }
+  .switcher button { flex: 1; background: none; border: none; padding: 9px; font-size: 13.5px; font-weight: 700; border-radius: 9px; color: var(--text-2); }
+  .switcher button.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+
+  .doc-thumb { width: 38px; height: 38px; border-radius: 9px; object-fit: cover; flex-shrink: 0; background: var(--surface-alt); }
+
+  .kv { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14.5px; }
+  .kv:last-child { border-bottom: none; }
+  .kv .k { color: var(--text-2); font-weight: 600; }
+  .kv .v { font-weight: 700; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #print-area, #print-area * { visibility: visible; }
+    #print-area { position: absolute; top: 0; left: 0; width: 100%; padding: 20px; }
+  }
+  #print-area { display: none; }
+  #print-area table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  #print-area th, #print-area td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #ccc; }
+
+  .link-row { display:flex; align-items:center; justify-content:space-between; padding: 14px 2px; border-bottom: 1px solid var(--border); }
+  .link-row:last-child { border-bottom:none; }
+  .link-row .l { font-weight: 700; font-size: 15px; display:flex; align-items:center; gap:10px; }
+  .link-row .l svg { width:18px; height:18px; stroke: var(--text-2); }
+  .link-row svg.chev { width:16px; height:16px; stroke: var(--text-3); }
 </style>
 </head>
 <body>
-<div id="app"></div>
-<div id="ride" role="dialog" aria-modal="true" aria-label="Fahrmodus"></div>
-<div id="print"></div>
-<div class="toast" id="toast"></div>
+<div id="app">
+
+  <div class="topbar">
+    <div>
+      <div class="greeting" id="greeting">Hallo</div>
+      <div class="date" id="topdate"></div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <section class="view" id="view-dashboard">
+    <div id="eveningBanner"></div>
+
+    <div class="card" style="text-align:center;">
+      <div class="gauge-wrap">
+        <svg viewBox="0 0 200 116" width="230" height="134">
+          <path d="M 20 106 A 80 80 0 0 1 180 106" fill="none" stroke="var(--surface-alt)" stroke-width="16" stroke-linecap="round"/>
+          <path id="gaugeFill" d="M 20 106 A 80 80 0 0 1 180 106" fill="none" stroke="var(--accent)" stroke-width="16" stroke-linecap="round"/>
+        </svg>
+        <div class="gauge-value">
+          <span class="num" id="gaugeNum">–</span>
+          <span class="unit">km Restreichweite</span>
+        </div>
+      </div>
+      <div class="gauge-meta" id="gaugeMeta">Noch keine Anzeige hinterlegt</div>
+
+      <div class="calib-form">
+        <div>
+          <label for="calibInput">Wert von der Roller-Anzeige</label>
+          <input type="number" inputmode="decimal" step="0.1" min="0" id="calibInput" placeholder="z. B. 41.1">
+        </div>
+        <button class="btn btn-primary btn-sm" style="height:47px;" onclick="submitCalibration()">Übernehmen</button>
+      </div>
+      <div class="field-note" style="text-align:left;">Trag hier abends den Wert ein, den der Roller beim Einschalten anzeigt – RidePilot zieht tagsüber automatisch deine gefahrenen Kilometer ab.</div>
+
+      <details class="history" id="calibHistoryWrap">
+        <summary>Verlauf anzeigen</summary>
+        <div id="calibHistory"></div>
+      </details>
+    </div>
+
+    <div class="quick-grid">
+      <button class="quick-btn" onclick="startRide()">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Fahrt starten
+      </button>
+      <button class="quick-btn" onclick="openJBL()">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5 17.5 17.5 12 23V1l5.5 5.5L6.5 17.5"/></svg>
+        JBL Portable
+      </button>
+      <button class="quick-btn" onclick="openSpotify()">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M7.5 9.5c3-1 6.5-.6 9 1M8 13c2.3-.7 5-.4 7.2.8M8.5 16.2c1.8-.5 3.8-.3 5.3.6"/></svg>
+        Spotify
+      </button>
+    </div>
+
+    <div class="card card-tight" id="vehicleCard" onclick="setView('einstellungen')" style="cursor:pointer;">
+      <div class="list-row" style="border:none; padding:0;">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/><path d="M9 18h6M13 18 10 8h5l3 5"/></svg></div>
+        <div class="main">
+          <div class="title" id="vehicleTitle">Volta VSX</div>
+          <div class="sub" id="vehicleSub">Gesamtstrecke wird geladen …</div>
+        </div>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;stroke:var(--text-3)"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>
+
+    <div id="maintAlertWrap"></div>
+  </section>
+
+  <!-- FAHRTEN -->
+  <section class="view" id="view-fahrten">
+    <div class="btn-row" style="margin-bottom:16px;">
+      <button class="btn btn-primary" onclick="startRide()">Fahrt starten</button>
+      <button class="btn btn-secondary" style="flex:0 0 auto; width:auto; padding:14px 16px;" onclick="openManualTrip()">+ manuell</button>
+    </div>
+    <div id="tripList"></div>
+  </section>
+
+  <!-- WARTUNG -->
+  <section class="view" id="view-wartung">
+    <div class="btn-row" style="margin-bottom:16px;">
+      <button class="btn btn-primary" onclick="openMaintForm()">+ Wartungspunkt hinzufügen</button>
+    </div>
+    <div id="maintList"></div>
+  </section>
+
+  <!-- DOKUMENTE -->
+  <section class="view" id="view-dokumente">
+    <div class="btn-row" style="margin-bottom:16px;">
+      <button class="btn btn-primary" onclick="triggerDocUpload()">+ Dokument hochladen</button>
+    </div>
+    <input type="file" id="docFileInput" accept="image/*,application/pdf" style="display:none" onchange="handleDocUpload(event)">
+    <div id="docList"></div>
+
+    <div class="section-title">PDF-Export</div>
+    <div class="card">
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="exportTripsPDF()">Fahrtenbuch</button>
+        <button class="btn btn-secondary" onclick="exportMaintPDF()">Wartungsheft</button>
+      </div>
+      <div class="field-note">Öffnet den Druckdialog – dort als PDF sichern.</div>
+    </div>
+  </section>
+
+  <!-- EINSTELLUNGEN -->
+  <section class="view" id="view-einstellungen">
+
+    <div class="section-title">Darstellung</div>
+    <div class="card card-tight">
+      <div class="switcher" id="themeSwitch">
+        <button data-v="system" onclick="setTheme('system')">System</button>
+        <button data-v="light" onclick="setTheme('light')">Hell</button>
+        <button data-v="dark" onclick="setTheme('dark')">Dunkel</button>
+      </div>
+    </div>
+
+    <div class="section-title">Roller-Profil</div>
+    <div class="card">
+      <label for="vName">Name</label>
+      <input type="text" id="vName" placeholder="z. B. Mein Volta">
+      <label for="vModel">Modell</label>
+      <input type="text" id="vModel" value="Volta VSX" disabled style="opacity:.7;">
+      <label for="vPlate">Kontrollschild</label>
+      <input type="text" id="vPlate" placeholder="z. B. ZH 123 456">
+      <button class="btn btn-primary" style="margin-top:14px;" onclick="saveVehicle()">Speichern</button>
+    </div>
+
+    <div class="section-title">Sicherheit</div>
+    <div class="card card-tight">
+      <div class="link-row" onclick="openPinSetup()" style="cursor:pointer;">
+        <span class="l"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V8a5 5 0 0 1 10 0v3"/></svg><span id="pinRowLabel">PIN einrichten</span></span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+      <div class="link-row" onclick="requestManagerAccess()" style="cursor:pointer;">
+        <span class="l"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Managerbereich</span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>
+
+    <div class="section-title">Backup</div>
+    <div class="card card-tight">
+      <div class="link-row" onclick="exportBackup()" style="cursor:pointer;">
+        <span class="l"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Backup erstellen</span>
+      </div>
+      <div class="link-row" onclick="triggerRestoreUpload()" style="cursor:pointer;">
+        <span class="l"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Backup wiederherstellen</span>
+      </div>
+      <input type="file" id="restoreInput" accept="application/json" style="display:none" onchange="handleRestoreFile(event)">
+    </div>
+
+    <div class="section-title">Über RidePilot</div>
+    <div class="card card-tight">
+      <div class="kv"><span class="k">Version</span><span class="v">1.0 · lokal</span></div>
+      <div class="kv"><span class="k">Fahrzeug</span><span class="v">Volta VSX · 25 km/h</span></div>
+      <div class="kv"><span class="k">Daten</span><span class="v">Nur auf diesem Gerät</span></div>
+    </div>
+  </section>
+
+  <!-- TAB BAR -->
+  <nav class="tabbar">
+    <button class="tab active" data-view="dashboard" onclick="setView('dashboard')">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 12h3v8h6v-6h2v6h6v-8h3z"/></svg>
+      Dashboard
+    </button>
+    <button class="tab" data-view="fahrten" onclick="setView('fahrten')">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20 3 17V4l6 3 6-3 6 3v13l-6-3-6 3z"/><line x1="9" y1="7" x2="9" y2="20"/><line x1="15" y1="4" x2="15" y2="17"/></svg>
+      Fahrten
+    </button>
+    <button class="tab" data-view="wartung" onclick="setView('wartung')">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 1 5.4-5.4L21 6l-3-3z"/></svg>
+      Wartung
+    </button>
+    <button class="tab" data-view="dokumente" onclick="setView('dokumente')">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Dokumente
+    </button>
+    <button class="tab" data-view="einstellungen" onclick="setView('einstellungen')">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      Mehr
+    </button>
+  </nav>
+
+</div>
+
+<!-- RIDE MODE OVERLAY -->
+<div id="ridemode">
+  <div class="rm-label">Fahrt läuft</div>
+  <div class="rm-timer" id="rmTimer">00:00</div>
+  <div class="rm-dist"><span class="num" id="rmDist">0.0</span> <span class="unit">km</span></div>
+  <div class="rm-gps" id="rmGpsStatus">GPS wird gesucht …</div>
+  <div class="rm-actions">
+    <button class="rm-photo" onclick="triggerRidePhoto()">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      Foto hinzufügen
+    </button>
+    <div class="rm-shots" id="rmShots"></div>
+    <button class="rm-stop" onclick="stopRide()">Fahrt beenden</button>
+  </div>
+  <input type="file" id="ridePhotoInput" accept="image/*" capture="environment" style="display:none" onchange="handleRidePhoto(event)">
+</div>
+
+<!-- GENERIC MODAL -->
+<div class="modal-bg" id="modalBg" onclick="if(event.target===this) closeModal()">
+  <div class="modal" id="modalContent" role="dialog" aria-modal="true"></div>
+</div>
+
+<div id="toast"></div>
+<div id="print-area"></div>
 
 <script>
-/* =========================================================
-   RidePilot – v1.0  (Phasen 1–10)
-   Alle Daten bleiben auf dem Gerät. Kein Server, kein Tracking.
-   ========================================================= */
-
-/* ---------- 1. Speicher-Adapter -------------------------- */
-const KEY = 'ridepilot:db';
-const store = {
-  async get(){
-    if (window.storage) { try { const r = await window.storage.get(KEY); return r ? JSON.parse(r.value) : null; } catch(e){ return null; } }
-    try { const raw = window.localStorage.getItem(KEY); return raw ? JSON.parse(raw) : null; } catch(e){ return null; }
-  },
-  async set(v){
-    const s = JSON.stringify(v);
-    if (window.storage) { try { await window.storage.set(KEY, s); return true; } catch(e){} }
-    try { window.localStorage.setItem(KEY, s); return true; } catch(e){ return false; }
-  }
-};
-
-/* ---------- 2. Datenmodell ------------------------------- */
-const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
-const fresh = () => ({
-  v:1,
-  settings:{ theme:'system', units:'km', pin:'1234', pinChanged:false, jbl:'', onboarded:false },
-  activeId:null, vehicles:[], trips:[], maint:[], docs:[]
-});
-let db = fresh();
-let view = 'dashboard';
-
-const MTYPES = {
-  service:  { l:'Service',      m:12, k:3000 },
-  oel:      { l:'Öl',           m:12, k:3000 },
-  bremsen:  { l:'Bremsen',      m:12, k:5000 },
-  reifen:   { l:'Reifen',       m:24, k:8000 },
-  batterie: { l:'Batterie',     m:12, k:10000 },
-  licht:    { l:'Beleuchtung',  m:12, k:0 },
-  sonstige: { l:'Sonstige Arbeiten', m:0, k:0 }
-};
-const DOCCATS = ['Versicherung','Kaufvertrag','Garantie','Rechnung','Servicebericht','Foto','Sonstiges'];
-
-/* ---------- 3. Helfer ------------------------------------ */
-const $  = s => document.querySelector(s);
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const U   = () => db.settings.units === 'mi' ? 'mi' : 'km';
-const toU = km => db.settings.units === 'mi' ? km * 0.621371 : km;
-const fromU = v => db.settings.units === 'mi' ? v / 0.621371 : v;
-const nKm = km => Math.round(toU(km || 0)).toLocaleString('de-CH');
-const fDate = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('de-CH', {day:'2-digit', month:'short', year:'numeric'}) : '–';
-const today = () => new Date().toISOString().slice(0,10);
-const addMonths = (iso, m) => { const d = new Date(iso + 'T00:00:00'); d.setMonth(d.getMonth() + m); return d.toISOString().slice(0,10); };
-const daysTo = iso => Math.round((new Date(iso + 'T00:00:00') - new Date(today() + 'T00:00:00')) / 86400000);
-const veh = () => db.vehicles.find(v => v.id === db.activeId) || db.vehicles[0] || null;
-const byV = arr => { const v = veh(); return v ? arr.filter(x => x.vehicleId === v.id) : []; };
-const sortD = arr => [...arr].sort((a,b) => (b.date || '').localeCompare(a.date || ''));
-
-let saveT, saveWarned = false;
-function save(){
-  clearTimeout(saveT);
-  saveT = setTimeout(async () => {
-    const ok = await store.set(db);
-    if (!ok && !saveWarned){
-      saveWarned = true;
-      toast('Speichern fehlgeschlagen – Speicher voll oder gesperrt.');
-    }
-  }, 120);
-}
-
-/* Eigener Bestätigungsdialog statt confirm() –
-   Systemdialoge werden in eingebetteten Ansichten blockiert. */
-let pendingConfirm = null;
-function ask(title, text, okLabel, fn){
-  pendingConfirm = fn;
-  sheet('<h2>' + esc(title) + '</h2><div class="lead">' + esc(text) + '</div>' +
-    '<div class="actions"><button class="btn ghost" data-act="close-sheet">Abbrechen</button>' +
-    '<button class="btn d" data-act="confirm-yes">' + esc(okLabel) + '</button></div>');
-}
-
-/* Entfernung zwischen zwei Punkten in Metern */
-function dist(a, b){
-  const R = 6371000, rad = x => x * Math.PI / 180;
-  const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
-  const s = Math.sin(dLat/2)**2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng/2)**2;
-  return 2 * R * Math.asin(Math.sqrt(s));
-}
-function trackLength(t){
-  let m = 0; for (let i = 1; i < t.length; i++) m += dist(t[i-1], t[i]); return m / 1000;
-}
-/* Route als eigenständige SVG-Zeichnung – ohne Kartendienst, ohne Datenabfluss */
-function routeSVG(track, w, h, thin){
-  if (!track || track.length < 2) return '';
-  const lat = track.map(p => p.lat), lng = track.map(p => p.lng);
-  const la0 = Math.min(...lat), la1 = Math.max(...lat), ln0 = Math.min(...lng), ln1 = Math.max(...lng);
-  const k = Math.cos((la0 + la1) / 2 * Math.PI / 180);
-  const spanX = Math.max((ln1 - ln0) * k, 1e-6), spanY = Math.max(la1 - la0, 1e-6);
-  const pad = thin ? 3 : 16;
-  const s = Math.min((w - pad*2) / spanX, (h - pad*2) / spanY);
-  const ox = (w - spanX * s) / 2, oy = (h - spanY * s) / 2;
-  const X = p => ox + (p.lng - ln0) * k * s;
-  const Y = p => oy + (la1 - p.lat) * s;
-  const d = track.map((p, i) => (i ? 'L' : 'M') + X(p).toFixed(1) + ' ' + Y(p).toFixed(1)).join(' ');
-  const a = track[0], b = track[track.length - 1];
-  return '<svg viewBox="0 0 ' + w + ' ' + h + '" width="100%" height="' + h + '" style="display:block">' +
-    '<path d="' + d + '" fill="none" stroke="var(--volt)" stroke-width="' + (thin ? 2 : 3.5) + '" stroke-linecap="round" stroke-linejoin="round"/>' +
-    (thin ? '' :
-      '<circle cx="' + X(a).toFixed(1) + '" cy="' + Y(a).toFixed(1) + '" r="6" fill="var(--volt)"/>' +
-      '<circle cx="' + X(b).toFixed(1) + '" cy="' + Y(b).toFixed(1) + '" r="6" fill="none" stroke="var(--volt)" stroke-width="3"/>') +
-    '</svg>';
-}
-const mapsLink = t => t && t.length > 1
-  ? 'https://maps.apple.com/?saddr=' + t[0].lat.toFixed(5) + ',' + t[0].lng.toFixed(5) +
-    '&daddr=' + t[t.length-1].lat.toFixed(5) + ',' + t[t.length-1].lng.toFixed(5) + '&dirflg=d'
-  : '';
-
-function toast(msg){
-  const t = $('#toast'); t.textContent = msg; t.classList.add('on');
-  clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('on'), 2200);
-}
-
-function applyTheme(){
-  const s = db.settings.theme;
-  const dark = s === 'dark' || (s === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-  document.querySelector('meta[name=theme-color]').content = dark ? '#080B0E' : '#EFF2F6';
-}
-
-/* Bild auf max. 900px verkleinern -> spart Speicher */
-function shrink(file, max = 900, q = 0.75){
-  return new Promise((res, rej) => {
-    const fr = new FileReader();
-    fr.onerror = () => rej(new Error('Datei konnte nicht gelesen werden.'));
-    fr.onload = () => {
-      const img = new Image();
-      img.onerror = () => rej(new Error('Kein gültiges Bild.'));
-      img.onload = () => {
-        const sc = Math.min(1, max / Math.max(img.width, img.height));
-        const c = document.createElement('canvas');
-        c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
-        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-        res(c.toDataURL('image/jpeg', q));
-      };
-      img.src = fr.result;
+/* ============ IndexedDB Helper ============ */
+const DB_NAME = 'ridepilot', DB_VERSION = 1;
+let dbPromise = null;
+function openDB() {
+  if (dbPromise) return dbPromise;
+  dbPromise = new Promise((resolve, reject) => {
+    if (!window.indexedDB) { reject(new Error('IndexedDB nicht verfügbar')); return; }
+    let req;
+    try { req = indexedDB.open(DB_NAME, DB_VERSION); }
+    catch (err) { reject(err); return; }
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      ['vehicle','trips','maintenance','documents','calibrations','settings'].forEach(name => {
+        if (!db.objectStoreNames.contains(name)) {
+          if (name === 'vehicle' || name === 'settings') db.createObjectStore(name, { keyPath: 'id' });
+          else db.createObjectStore(name, { keyPath: 'id', autoIncrement: true });
+        }
+      });
     };
-    fr.readAsDataURL(file);
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror = e => reject(e.target.error);
   });
+  return dbPromise;
 }
-function readAsData(file){
-  return new Promise((res, rej) => {
-    const fr = new FileReader();
-    fr.onload = () => res(fr.result); fr.onerror = () => rej(new Error('Datei konnte nicht gelesen werden.'));
-    fr.readAsDataURL(file);
-  });
+async function idbGet(store, key) {
+  const db = await openDB();
+  return new Promise((res, rej) => { const r = db.transaction(store,'readonly').objectStore(store).get(key); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+}
+async function idbGetAll(store) {
+  const db = await openDB();
+  return new Promise((res, rej) => { const r = db.transaction(store,'readonly').objectStore(store).getAll(); r.onsuccess=()=>res(r.result||[]); r.onerror=()=>rej(r.error); });
+}
+async function idbPut(store, value) {
+  const db = await openDB();
+  return new Promise((res, rej) => { const r = db.transaction(store,'readwrite').objectStore(store).put(value); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+}
+async function idbDelete(store, key) {
+  const db = await openDB();
+  return new Promise((res, rej) => { const r = db.transaction(store,'readwrite').objectStore(store).delete(key); r.onsuccess=()=>res(); r.onerror=()=>rej(r.error); });
+}
+async function idbClear(store) {
+  const db = await openDB();
+  return new Promise((res, rej) => { const r = db.transaction(store,'readwrite').objectStore(store).clear(); r.onsuccess=()=>res(); r.onerror=()=>rej(r.error); });
 }
 
-/* ---------- 4. Wartungslogik ----------------------------- */
-function dueList(){
-  const v = veh(); if (!v) return [];
-  const out = [];
-  Object.entries(MTYPES).forEach(([k, def]) => {
-    if (!def.m && !def.k) return;
-    const last = sortD(byV(db.maint).filter(m => m.type === k))[0];
-    if (!last) return;
-    const iM = last.intervalMonths ?? def.m, iK = last.intervalKm ?? def.k;
-    const dDate = iM ? addMonths(last.date, iM) : null;
-    const dKm   = iK ? (last.odo || 0) + iK : null;
-    const dLeft = dDate ? daysTo(dDate) : null;
-    const kLeft = dKm ? dKm - (v.odo || 0) : null;
-    let st = 'ok';
-    if ((dLeft !== null && dLeft < 0) || (kLeft !== null && kLeft < 0)) st = 'bad';
-    else if ((dLeft !== null && dLeft <= 30) || (kLeft !== null && kLeft <= 300)) st = 'warn';
-    out.push({ key:k, label:def.l, dueDate:dDate, dueKm:dKm, dLeft, kLeft, st, last });
-  });
-  return out.sort((a, b) => (a.dLeft ?? 9e9) - (b.dLeft ?? 9e9));
+/* ============ Helpers ============ */
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(window.__toastT);
+  window.__toastT = setTimeout(() => el.classList.remove('show'), 2600);
 }
-function tasks(){
-  const v = veh(); if (!v) return [];
-  const t = dueList().filter(d => d.st !== 'ok').map(d => ({
-    st: d.st, t: d.label + ' fällig',
-    s: d.dLeft !== null ? (d.dLeft < 0 ? Math.abs(d.dLeft) + ' Tage überfällig' : 'in ' + d.dLeft + ' Tagen')
-                        : (d.kLeft < 0 ? 'seit ' + nKm(-d.kLeft) + ' ' + U() + ' fällig' : 'in ' + nKm(d.kLeft) + ' ' + U()),
-    go: 'maintenance'
-  }));
-  if (v.insuranceUntil){
-    const d = daysTo(v.insuranceUntil);
-    if (d < 0) t.unshift({ st:'bad', t:'Versicherung abgelaufen', s:'Seit ' + fDate(v.insuranceUntil), go:'vehicles' });
-    else if (d <= 45) t.unshift({ st:'warn', t:'Versicherung läuft aus', s:'Gültig bis ' + fDate(v.insuranceUntil), go:'vehicles' });
+function fmtKm(n) { return (Math.round(n * 10) / 10).toLocaleString('de-CH', { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
+function fmtDate(d) { return new Date(d).toLocaleDateString('de-CH', { timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit', year: 'numeric' }); }
+function fmtDateTime(d) { return new Date(d).toLocaleString('de-CH', { timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
+function fmtDuration(sec) { const m = Math.floor(sec/60); const h = Math.floor(m/60); return h>0 ? `${h} Std. ${m%60} Min.` : `${m} Min.`; }
+function uid() { return Date.now() + '-' + Math.random().toString(36).slice(2,8); }
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2-lat1) * Math.PI/180, dLon = (lon2-lon1) * Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+async function sha256(str) {
+  if (!window.crypto || !window.crypto.subtle) throw new Error('crypto.subtle nicht verfügbar (benötigt https)');
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str + '::ridepilot'));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+/* ============ App State ============ */
+let currentView = 'dashboard';
+let allTrips = [];
+
+/* ============ Init ============ */
+window.addEventListener('error', (e) => { console.error('RidePilot Fehler:', e.error || e.message); });
+window.addEventListener('unhandledrejection', (e) => { console.error('RidePilot Fehler:', e.reason); });
+
+function showStorageError(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16.01" x2="12" y2="16"/></svg><div class="t" style="color:var(--danger);">Lokaler Speicher hier nicht verfügbar</div><div class="s">Diese Vorschau (z. B. im Chat oder als lokal geöffnete Datei) erlaubt keinen Offline-Speicher. Bitte RidePilot über die installierte/veröffentlichte Adresse öffnen.</div></div>`;
+}
+
+/* Wichtig: Die Ansicht wird immer sofort sichtbar gemacht – auch wenn das Laden der
+   Daten fehlschlägt (z. B. weil IndexedDB in einer eingebetteten Vorschau blockiert ist).
+   So bleibt die App nie leer/unbedienbar stehen. */
+window.addEventListener('DOMContentLoaded', async () => {
+  renderGreeting();
+  applyThemeSwitchUI();
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
-  if (!byV(db.docs).length) t.push({ st:'warn', t:'Keine Dokumente hinterlegt', s:'Versicherungspolice und Kaufvertrag ablegen', go:'docs' });
-  return t;
-}
-
-/* ---------- 5. Icons ------------------------------------- */
-const I = {
-  dash:'<path d="M4 13h7V4H4v9Zm0 7h7v-5H4v5Zm9 0h7v-9h-7v9Zm0-16v5h7V4h-7Z"/>',
-  scoot:'<circle cx="5.5" cy="17.5" r="3"/><circle cx="18.5" cy="17.5" r="3"/><path d="M8.5 17.5h7M13 6h3l2.5 11.5M13 6l-2 8H8.5"/>',
-  route:'<circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18h5a4 4 0 0 0 0-8h-3a4 4 0 0 1 0-8"/>',
-  wrench:'<path d="M14.7 6.3a4 4 0 0 0 5 5l-8.4 8.4a2.5 2.5 0 0 1-3.5-3.5l8.4-8.4Z"/><path d="M17.5 3.5 20.5 6.5"/>',
-  doc:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/>',
-  pdf:'<path d="M7 8V4h10v4"/><rect x="4" y="8" width="16" height="7" rx="2"/><path d="M7 15h10v5H7z"/>',
-  gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.2 5.2l2.1 2.1M16.7 16.7l2.1 2.1M18.8 5.2l-2.1 2.1M7.3 16.7l-2.1 2.1"/>',
-  backup:'<path d="M4 7h16v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7Z"/><path d="M3 3h18v4H3z"/><path d="M10 12h4"/>',
-  more:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
-  chev:'<path d="m9 6 6 6-6 6"/>',
-  plus:'<path d="M12 5v14M5 12h14"/>',
-  lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
-  speed:'<path d="M12 14 16 9"/><circle cx="12" cy="14" r="1.5"/><path d="M4.5 17a9 9 0 1 1 15 0"/>',
-  bolt:'<path d="M13 3 5 14h6l-1 7 8-11h-6l1-7Z"/>',
-  shield:'<path d="M12 3 5 6v6c0 4.5 3 7.6 7 9 4-1.4 7-4.5 7-9V6l-7-3Z"/>',
-  speaker:'<rect x="6" y="3" width="12" height="18" rx="3"/><circle cx="12" cy="14" r="3.2"/><circle cx="12" cy="7" r="1"/>'
-};
-const svg = (p, s = 22) => '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
-
-const NAV = [
-  ['dashboard','Dashboard',I.dash], ['vehicles','Roller',I.scoot], ['trips','Fahrten',I.route],
-  ['maintenance','Wartung',I.wrench], ['docs','Dokumente',I.doc], ['pdf','PDF',I.pdf],
-  ['settings','Einstellungen',I.gear], ['backup','Backup',I.backup]
-];
-const TABS = [['dashboard','Start',I.dash],['trips','Fahrten',I.route],['maintenance','Wartung',I.wrench],['docs','Dokumente',I.doc],['more','Mehr',I.more]];
-
-/* ---------- 6. Sheet ------------------------------------- */
-let sheetOpen = false;
-function sheet(html){
-  closeSheet(true);
-  const scrim = document.createElement('div'); scrim.className = 'scrim'; scrim.dataset.act = 'close-sheet';
-  const s = document.createElement('div'); s.className = 'sheet'; s.setAttribute('role','dialog'); s.setAttribute('aria-modal','true');
-  s.innerHTML = '<div class="grab"></div>' + html;
-  document.body.append(scrim, s);
-  requestAnimationFrame(() => { scrim.classList.add('on'); s.classList.add('on'); });
-  sheetOpen = true;
-  const first = s.querySelector('input,select,textarea,button');
-  if (first && window.innerWidth > 700) first.focus({ preventScroll:true });
-}
-function closeSheet(instant){
-  document.querySelectorAll('.sheet,.scrim').forEach(el => {
-    el.classList.remove('on');
-    if (instant) el.remove(); else setTimeout(() => el.remove(), 260);
-  });
-  sheetOpen = false;
-}
-const val = id => { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
-
-/* ---------- 7. Views ------------------------------------- */
-function head(title, sub, right){
-  return '<div class="topbar"><div><div class="title display">' + esc(title) + '</div>' +
-    (sub ? '<div class="sub">' + esc(sub) + '</div>' : '') + '</div><div class="spacer"></div>' + (right || '') + '</div>';
-}
-function empty(title, text, btn){
-  return '<div class="card"><div class="empty"><div class="e">' + esc(title) + '</div><div>' + esc(text) + '</div>' +
-    (btn ? '<div style="margin-top:16px">' + btn + '</div>' : '') + '</div></div>';
-}
-const rowHTML = (o) =>
-  '<button class="row" data-act="' + o.act + '"' + (o.id ? ' data-id="' + o.id + '"' : '') + (o.arg ? ' data-arg="' + o.arg + '"' : '') + '>' +
-    (o.thumb ? '<span class="ico" style="padding:3px;overflow:hidden">' + o.thumb + '</span>'
-      : o.icon ? '<span class="ico ' + (o.tone || '') + '">' + svg(o.icon, 19) + '</span>' : '') +
-    '<span class="grow"><span class="t">' + esc(o.t) + '</span>' + (o.s ? '<span class="s">' + esc(o.s) + '</span>' : '') + '</span>' +
-    (o.badge ? o.badge : (o.v ? '<span class="v num">' + esc(o.v) + '</span>' : '')) +
-    '<span class="chev">' + svg(I.chev, 16) + '</span></button>';
-
-/* --- Dashboard --- */
-function vDashboard(){
-  const v = veh(); if (!v) return vSetupPrompt();
-  const trips = sortD(byV(db.trips)); const last = trips[0];
-  const km30 = trips.filter(t => daysTo(t.date) > -30).reduce((s, t) => s + (+t.distance || 0), 0);
-  const due = dueList().filter(d => d.st !== 'ok')[0] || dueList()[0];
-  const ts = tasks();
-  const insDays = v.insuranceUntil ? daysTo(v.insuranceUntil) : null;
-
-  let h = head('Hallo', new Date().toLocaleDateString('de-CH', { weekday:'long', day:'numeric', month:'long' }));
-
-  h += '<div class="card odo"><div class="ticks"></div><div class="row" style="padding:0;min-height:0">' +
-    (v.photo ? '<img class="thumb" src="' + v.photo + '" alt="">' : '<span class="thumb" style="display:grid;place-items:center">' + svg(I.scoot, 30) + '</span>') +
-    '<div class="grow"><span class="plate mono">' + esc(v.plate || 'ohne Kennzeichen') + '</span>' +
-    '<div style="font-weight:700;margin-top:6px;font-size:15px">' + esc(v.name || (v.make + ' ' + v.model)) + '</div></div></div>' +
-    '<div class="big num">' + nKm(v.odo) + '<small>' + U() + '</small></div>' +
-    '<div style="font-size:13px;font-weight:600;opacity:.75;margin-top:4px;position:relative;z-index:1">Kilometerstand · ' + esc(v.make + ' ' + v.model) + '</div></div>';
-
-  h += '<div class="grid two" style="margin-top:14px">';
-  h += '<div class="card"><div class="card-h"><span class="eyebrow">Nächste Wartung</span></div>' +
-    (due ? '<div class="display" style="font-size:20px;font-weight:800">' + esc(due.label) + '</div>' +
-      '<div style="color:var(--muted);font-size:14px;margin-top:4px">' +
-      (due.dueDate ? 'Fällig ' + fDate(due.dueDate) : '') + (due.dueKm ? (due.dueDate ? ' · ' : 'Fällig ') + 'bei ' + nKm(due.dueKm) + ' ' + U() : '') + '</div>' +
-      '<div style="margin-top:12px"><span class="badge ' + (due.st === 'bad' ? 'bad' : due.st === 'warn' ? 'warn' : 'ok') + '">' +
-      (due.st === 'bad' ? 'Überfällig' : due.st === 'warn' ? 'Bald fällig' : 'Alles im grünen Bereich') + '</span></div>'
-      : '<div style="color:var(--muted);font-size:14px">Noch keine Wartung erfasst. Trage den letzten Service ein, damit RidePilot rechnen kann.</div>') +
-    '</div>';
-
-  h += '<div class="card"><div class="card-h"><span class="eyebrow">Letzte Fahrt</span></div>' +
-    (last ? '<div class="display" style="font-size:20px;font-weight:800">' + nKm(+last.distance) + ' ' + U() + '</div>' +
-      '<div style="color:var(--muted);font-size:14px;margin-top:4px">' + esc(last.from || '?') + ' → ' + esc(last.to || '?') + '</div>' +
-      '<div style="color:var(--muted);font-size:13px;margin-top:2px">' + fDate(last.date) + (last.duration ? ' · ' + esc(last.duration) + ' Min.' : '') + '</div>' +
-      (last.track && last.track.length > 1 ? '<div class="routebox" style="margin:12px 0 0">' + routeSVG(last.track, 300, 72) + '</div>' : '')
-      : '<div style="color:var(--muted);font-size:14px">Noch keine Fahrt erfasst.</div>') + '</div></div>';
-
-  h += '<div class="stats" style="margin-top:14px">' +
-    '<div class="stat"><div class="k">Letzte 30 Tage</div><div class="v num">' + nKm(km30) + ' <span style="font-size:14px">' + U() + '</span></div></div>' +
-    '<div class="stat"><div class="k">Fahrten total</div><div class="v num">' + trips.length + '</div></div>' +
-    '<div class="stat"><div class="k">Versicherung</div><div class="v" style="font-size:16px">' +
-      (insDays === null ? '–' : insDays < 0 ? 'Abgelaufen' : 'bis ' + fDate(v.insuranceUntil)) + '</div></div>' +
-    '<div class="stat"><div class="k">Batterie</div><div class="v" style="font-size:16px">' +
-      (v.batteryHealth ? esc(v.batteryHealth) + ' %' : (v.battery ? esc(v.battery) : '–')) + '</div></div></div>';
-
-  h += '<div class="card-h" style="margin:22px 0 10px"><span class="eyebrow">Offene Aufgaben</span><div class="spacer"></div>' +
-       '<span class="badge">' + ts.length + '</span></div>';
-  h += ts.length
-    ? '<div class="list">' + ts.map(t => rowHTML({ act:'go', arg:t.go, t:t.t, s:t.s, icon:t.st === 'bad' ? I.shield : I.wrench, tone:t.st === 'bad' ? 'd' : 'w' })).join('') + '</div>'
-    : '<div class="card"><div class="empty" style="padding:22px"><div class="e">Nichts offen</div><div>Alle Wartungen und Fristen sind aktuell.</div></div></div>';
-
-  h += '<div class="card-h" style="margin:22px 0 10px"><span class="eyebrow">Schnellaktionen</span></div><div class="quick">' +
-    qa('trip-new', I.route, 'Fahrt erfassen') + qa('odo-set', I.speed, 'Kilometerstand') +
-    qa('ride-on', I.bolt, 'Fahrmodus starten') + qa('jbl', I.speaker, 'JBL Portable öffnen') + '</div>';
-  return h;
-}
-const qa = (act, ico, label) => '<button class="qa" data-act="' + act + '"><span class="ico g">' + svg(ico, 19) + '</span><span class="l">' + esc(label) + '</span></button>';
-
-function vSetupPrompt(){
-  return head('RidePilot') + empty('Noch kein Roller angelegt',
-    'Lege dein Fahrzeug an – danach stehen Dashboard, Fahrten und Wartung bereit.',
-    '<button class="btn p" data-act="veh-new">Roller anlegen</button>');
-}
-
-/* --- Roller --- */
-function vVehicles(){
-  let h = head('Roller', db.vehicles.length + ' Fahrzeug' + (db.vehicles.length === 1 ? '' : 'e'),
-    '<button class="btn p sm" data-act="veh-new">' + svg(I.plus, 17) + ' Neu</button>');
-  if (!db.vehicles.length) return h + empty('Keine Fahrzeuge', 'Der erste Roller ist in 30 Sekunden angelegt.',
-    '<button class="btn p" data-act="veh-new">Roller anlegen</button>');
-  h += '<div class="list">' + db.vehicles.map(v => rowHTML({
-      act:'veh-open', id:v.id, t:v.name || (v.make + ' ' + v.model),
-      s:[v.make + ' ' + v.model, v.year, v.plate].filter(Boolean).join(' · '),
-      icon:I.scoot, tone:v.id === db.activeId ? 'g' : '',
-      badge:v.id === db.activeId ? '<span class="badge ok">Aktiv</span>' : ''
-    })).join('') + '</div>';
-  return h;
-}
-function vehSheet(id){
-  const v = db.vehicles.find(x => x.id === id) || {};
-  const isNew = !id;
-  sheet('<h2>' + (isNew ? 'Roller anlegen' : 'Roller bearbeiten') + '</h2>' +
-    '<div class="lead">Fahrzeugdaten, Versicherung und Servicepartner an einem Ort.</div>' +
-    '<div class="f"><label>Profilbild</label><input type="file" id="v-photo" accept="image/*">' +
-      (v.photo ? '<div style="margin-top:10px"><img src="' + v.photo + '" style="width:88px;height:88px;object-fit:cover;border-radius:16px"></div>' : '') +
-      '<div class="hint" id="v-photo-info">Wird verkleinert auf dem Gerät gespeichert.</div></div>' +
-    fld('v-name','Fahrzeugname', v.name || '', 'z. B. Volta') +
-    '<div class="f2">' + fld('v-make','Hersteller', v.make || 'Volta') + fld('v-model','Modell', v.model || 'VSX') + '</div>' +
-    '<div class="f2">' + fld('v-year','Baujahr', v.year || '', '2024', 'number') + fld('v-color','Farbe', v.color || '') + '</div>' +
-    '<div class="f2">' + fld('v-plate','Kennzeichen', v.plate || '', 'ZH 12345') + fld('v-vin','VIN (optional)', v.vin || '') + '</div>' +
-    fld('v-odo','Kilometerstand (' + U() + ')', v.odo != null ? Math.round(toU(v.odo)) : '', '0', 'number') +
-    '<div class="f2">' + fld('v-ins','Versicherung', v.insurer || '', 'Gesellschaft') + fld('v-insuntil','Gültig bis', v.insuranceUntil || '', '', 'date') + '</div>' +
-    '<div class="f2">' + fld('v-policy','Policennummer', v.policy || '') + fld('v-batt','Batterie (% Gesundheit)', v.batteryHealth || '', '100', 'number') + '</div>' +
-    fld('v-partner','Servicepartner', v.servicePartner || '') +
-    '<div class="f"><label>Notizen</label><textarea id="v-notes">' + esc(v.notes || '') + '</textarea></div>' +
-    '<div class="actions"><button class="btn ghost" data-act="close-sheet">Abbrechen</button>' +
-    '<button class="btn p" data-act="veh-save" data-id="' + (id || '') + '">Speichern</button></div>' +
-    (isNew ? '' : '<button class="btn wide ghost" style="margin-top:10px" data-act="veh-activate" data-id="' + id + '">Als aktiven Roller setzen</button>' +
-      '<div class="hint" style="margin-top:12px;text-align:center">Löschen nur im Managerbereich (Einstellungen → Manager).</div>'));
-}
-function fld(id, label, v, ph, type){
-  return '<div class="f"><label for="' + id + '">' + esc(label) + '</label>' +
-    '<input id="' + id + '" type="' + (type || 'text') + '" value="' + esc(v) + '" placeholder="' + esc(ph || '') + '"></div>';
-}
-async function vehSave(id){
-  const name = val('v-name'), make = val('v-make'), model = val('v-model');
-  if (!make && !model && !name) return toast('Bitte mindestens Hersteller oder Name angeben.');
-  let v = db.vehicles.find(x => x.id === id);
-  if (!v){ v = { id: uid(), createdAt: today() }; db.vehicles.push(v); if (!db.activeId) db.activeId = v.id; }
-  Object.assign(v, {
-    name, make, model, year: val('v-year'), color: val('v-color'), plate: val('v-plate').toUpperCase(),
-    vin: val('v-vin').toUpperCase(), odo: Math.round(fromU(+val('v-odo') || 0)),
-    insurer: val('v-ins'), insuranceUntil: val('v-insuntil'), policy: val('v-policy'),
-    batteryHealth: val('v-batt'), servicePartner: val('v-partner'),
-    notes: document.getElementById('v-notes').value.trim()
-  });
-  const f = document.getElementById('v-photo');
-  if (f && f.files[0]) { try { v.photo = await shrink(f.files[0]); } catch(e){ toast(e.message); } }
-  db.settings.onboarded = true; save(); closeSheet(); render(); toast('Roller gespeichert');
-}
-
-/* --- Fahrten --- */
-function vTrips(){
-  const v = veh(); if (!v) return vSetupPrompt();
-  const list = sortD(byV(db.trips));
-  const total = list.reduce((s, t) => s + (+t.distance || 0), 0);
-  const routes = list.filter(t => t.track && t.track.length > 1).length;
-  let h = head('Fahrten', list.length ? nKm(total) + ' ' + U() + ' erfasst · ' + routes + ' mit Route' : 'Noch nichts erfasst',
-    '<button class="btn p sm" data-act="trip-new">' + svg(I.plus, 17) + ' Neu</button>');
-  if (!list.length) return h + empty('Kein Fahrtenbuch', 'Starte den Fahrmodus – die Strecke wird per GPS aufgezeichnet. Oder trage eine Fahrt von Hand ein.',
-    '<button class="btn p" data-act="ride-on">Fahrmodus starten</button>') +
-    '<div class="card"><div class="eyebrow">Routenverlauf</div><div style="color:var(--muted);font-size:14px;margin-top:6px">Jede im Fahrmodus aufgezeichnete Fahrt speichert ihre Strecke. Die Route liegt auf dem Gerät und wird ohne Kartendienst gezeichnet – nur der Knopf „In Karten öffnen" ruft Apple Karten auf.</div>' +
-    '<button class="btn wide ghost" style="margin-top:14px" data-act="trip-new">Fahrt von Hand erfassen</button></div>';
-  h += '<div class="list">' + list.map(t => rowHTML({
-      act:'trip-open', id:t.id, t:(t.from || '?') + ' → ' + (t.to || '?'),
-      s:fDate(t.date) + (t.duration ? ' · ' + t.duration + ' Min.' : '') + (t.track ? ' · Route' : ''),
-      v:nKm(+t.distance) + ' ' + U(),
-      thumb: t.track && t.track.length > 1 ? routeSVG(t.track, 30, 30, true) : null,
-      icon:I.route
-    })).join('') + '</div>';
-  return h;
-}
-let pendingTrack = null;
-function tripSheet(id, pre){
-  const t = db.trips.find(x => x.id === id) || {};
-  pendingTrack = pre && pre.track && pre.track.length > 1 ? pre.track : null;
-  const track = t.track && t.track.length > 1 ? t.track : pendingTrack;
-  const distVal = pre && pre.km ? Math.round(toU(pre.km) * 10) / 10
-                : (t.distance != null ? Math.round(toU(t.distance)) : '');
-  sheet('<h2>' + (id ? 'Fahrt' : 'Fahrt erfassen') + '</h2>' +
-    '<div class="lead">' + (track ? 'Aufgezeichnete Route – Distanz ist bereits übernommen.' : 'Kilometerstand wird beim Speichern automatisch erhöht.') + '</div>' +
-    (track ? '<div class="routebox">' + routeSVG(track, 320, 190) +
-        '<div class="routemeta"><span>' + track.length + ' Punkte</span><span>' + toU(trackLength(track)).toFixed(1) + ' ' + U() + '</span></div></div>' +
-        '<a class="btn wide ghost" style="margin-bottom:14px;text-decoration:none" href="' + mapsLink(track) + '" target="_blank" rel="noopener">In Karten öffnen</a>'
-      : '') +
-    '<div class="f2">' + fld('t-date','Datum', t.date || today(), '', 'date') + fld('t-dist','Distanz (' + U() + ')', distVal, '0', 'number') + '</div>' +
-    '<div class="f2">' + fld('t-from','Start', t.from || '') + fld('t-to','Ziel', t.to || '') + '</div>' +
-    fld('t-dur','Dauer (Minuten)', (pre && pre.duration) || t.duration || '', '25', 'number') +
-    '<div class="f"><label>Notizen</label><textarea id="t-notes">' + esc(t.notes || '') + '</textarea></div>' +
-    '<div class="actions">' + (id ? '<button class="btn d" data-act="trip-del" data-id="' + id + '">Löschen</button>' : '<button class="btn ghost" data-act="close-sheet">Abbrechen</button>') +
-    '<button class="btn p" data-act="trip-save" data-id="' + (id || '') + '">Speichern</button></div>');
-}
-function tripSave(id){
-  const v = veh(); if (!v) return;
-  const dist = Math.round(fromU(+val('t-dist') || 0));
-  let t = db.trips.find(x => x.id === id);
-  const oldDist = t ? (+t.distance || 0) : 0;
-  if (!t){ t = { id: uid(), vehicleId: v.id }; db.trips.push(t); }
-  Object.assign(t, { date: val('t-date') || today(), distance: dist, from: val('t-from'), to: val('t-to'),
-    duration: val('t-dur'), notes: document.getElementById('t-notes').value.trim() });
-  if (pendingTrack) { t.track = pendingTrack; pendingTrack = null; }
-  v.odo = Math.max(0, (v.odo || 0) + dist - oldDist);
-  save(); closeSheet(); render(); toast('Fahrt gespeichert · Stand ' + nKm(v.odo) + ' ' + U());
-}
-
-/* --- Wartung --- */
-function vMaint(){
-  const v = veh(); if (!v) return vSetupPrompt();
-  const due = dueList(), log = sortD(byV(db.maint));
-  let h = head('Wartung', 'Intervalle und Verlauf', '<button class="btn p sm" data-act="maint-new">' + svg(I.plus, 17) + ' Neu</button>');
-  h += '<div class="card-h" style="margin-bottom:10px"><span class="eyebrow">Fälligkeiten</span></div>';
-  h += due.length
-    ? '<div class="list">' + due.map(d => rowHTML({
-        act:'maint-new-type', arg:d.key, t:d.label,
-        s:(d.dueDate ? fDate(d.dueDate) : '') + (d.dueKm ? (d.dueDate ? ' · ' : '') + 'bei ' + nKm(d.dueKm) + ' ' + U() : ''),
-        icon:I.wrench, tone:d.st === 'bad' ? 'd' : d.st === 'warn' ? 'w' : 'g',
-        badge:'<span class="badge ' + (d.st === 'bad' ? 'bad' : d.st === 'warn' ? 'warn' : 'ok') + '">' +
-          (d.st === 'bad' ? 'Überfällig' : d.st === 'warn' ? 'Bald' : 'OK') + '</span>'
-      })).join('') + '</div>'
-    : '<div class="card"><div class="empty" style="padding:22px"><div class="e">Keine Intervalle berechnet</div><div>Erfasse eine erledigte Arbeit – daraus ergibt sich der nächste Termin.</div></div></div>';
-  h += '<div class="card-h" style="margin:22px 0 10px"><span class="eyebrow">Verlauf</span></div>';
-  h += log.length
-    ? '<div class="list">' + log.map(m => rowHTML({
-        act:'maint-open', id:m.id, t:(MTYPES[m.type] ? MTYPES[m.type].l : m.type),
-        s:fDate(m.date) + ' · ' + nKm(m.odo) + ' ' + U() + (m.notes ? ' · ' + m.notes.slice(0,36) : ''),
-        v:m.cost ? 'CHF ' + m.cost : '', icon:I.wrench
-      })).join('') + '</div>'
-    : empty('Kein Verlauf', 'Trage den letzten Service ein, damit RidePilot vorausrechnen kann.',
-        '<button class="btn p" data-act="maint-new">Arbeit erfassen</button>');
-  return h;
-}
-function maintSheet(id, presetType){
-  const m = db.maint.find(x => x.id === id) || {};
-  const type = m.type || presetType || 'service';
-  const def = MTYPES[type];
-  sheet('<h2>' + (id ? 'Wartung bearbeiten' : 'Wartung erfassen') + '</h2>' +
-    '<div class="lead">Erledigte Arbeit dokumentieren – das nächste Intervall wird daraus berechnet.</div>' +
-    '<div class="f"><label for="m-type">Art</label><select id="m-type">' +
-      Object.entries(MTYPES).map(([k, d]) => '<option value="' + k + '"' + (k === type ? ' selected' : '') + '>' + d.l + '</option>').join('') +
-    '</select></div>' +
-    '<div class="f2">' + fld('m-date','Datum', m.date || today(), '', 'date') +
-      fld('m-odo','Kilometerstand (' + U() + ')', m.odo != null ? Math.round(toU(m.odo)) : Math.round(toU(veh().odo || 0)), '0', 'number') + '</div>' +
-    '<div class="f2">' + fld('m-im','Intervall Monate', m.intervalMonths ?? def.m, '12', 'number') +
-      fld('m-ik','Intervall ' + U(), m.intervalKm != null ? Math.round(toU(m.intervalKm)) : Math.round(toU(def.k)), '3000', 'number') + '</div>' +
-    '<div class="f2">' + fld('m-cost','Kosten (CHF)', m.cost || '', '0', 'number') + fld('m-shop','Werkstatt', m.shop || (veh().servicePartner || '')) + '</div>' +
-    '<div class="f"><label>Notizen</label><textarea id="m-notes">' + esc(m.notes || '') + '</textarea></div>' +
-    '<div class="actions">' + (id ? '<button class="btn d" data-act="maint-del" data-id="' + id + '">Löschen</button>' : '<button class="btn ghost" data-act="close-sheet">Abbrechen</button>') +
-    '<button class="btn p" data-act="maint-save" data-id="' + (id || '') + '">Speichern</button></div>');
-}
-function maintSave(id){
-  const v = veh(); if (!v) return;
-  let m = db.maint.find(x => x.id === id);
-  if (!m){ m = { id: uid(), vehicleId: v.id }; db.maint.push(m); }
-  Object.assign(m, {
-    type: val('m-type'), date: val('m-date') || today(), odo: Math.round(fromU(+val('m-odo') || 0)),
-    intervalMonths: +val('m-im') || 0, intervalKm: Math.round(fromU(+val('m-ik') || 0)),
-    cost: val('m-cost'), shop: val('m-shop'), notes: document.getElementById('m-notes').value.trim()
-  });
-  if (m.odo > (v.odo || 0)) v.odo = m.odo;
-  save(); closeSheet(); render(); toast('Wartung gespeichert');
-}
-
-/* --- Dokumente --- */
-function vDocs(){
-  const v = veh(); if (!v) return vSetupPrompt();
-  const list = sortD(byV(db.docs));
-  let h = head('Dokumente', list.length + ' Ablage' + (list.length === 1 ? '' : 'n'),
-    '<button class="btn p sm" data-act="doc-new">' + svg(I.plus, 17) + ' Neu</button>');
-  if (!list.length) return h + empty('Ablage ist leer',
-    'Police, Kaufvertrag, Garantie und Rechnungen liegen hier – auch offline.',
-    '<button class="btn p" data-act="doc-new">Dokument ablegen</button>');
-  h += '<div class="list">' + list.map(d => rowHTML({
-      act:'doc-open', id:d.id, t:d.title, s:d.category + ' · ' + fDate(d.date) + (d.fileName ? ' · ' + d.fileName : ''),
-      icon:I.doc, tone:d.category === 'Versicherung' ? 'g' : ''
-    })).join('') + '</div>';
-  return h;
-}
-function docSheet(id){
-  const d = db.docs.find(x => x.id === id) || {};
-  sheet('<h2>' + (id ? 'Dokument' : 'Dokument ablegen') + '</h2>' +
-    '<div class="lead">Bleibt auf dem Gerät. Bilder werden verkleinert, PDF bis 2 MB.</div>' +
-    fld('d-title','Titel', d.title || '', 'Versicherungspolice 2026') +
-    '<div class="f2"><div class="f" style="margin:0"><label for="d-cat">Kategorie</label><select id="d-cat">' +
-      DOCCATS.map(c => '<option' + (c === d.category ? ' selected' : '') + '>' + c + '</option>').join('') + '</select></div>' +
-      fld('d-date','Datum', d.date || today(), '', 'date') + '</div>' +
-    '<div class="f"><label>Datei</label><input type="file" id="d-file" accept="image/*,application/pdf">' +
-      '<div class="hint" id="d-file-info">Bild oder PDF. Wird beim Speichern übernommen.</div>' +
-      (d.fileData ? (d.fileType && d.fileType.startsWith('image') ?
-        '<div style="margin-top:10px"><img src="' + d.fileData + '" style="max-width:100%;border-radius:14px"></div>' :
-        '<div style="margin-top:10px"><a href="' + d.fileData + '" download="' + esc(d.fileName || 'dokument.pdf') + '">' + esc(d.fileName) + ' herunterladen</a></div>') : '') + '</div>' +
-    '<div class="f"><label>Notizen</label><textarea id="d-notes">' + esc(d.notes || '') + '</textarea></div>' +
-    '<div class="actions">' + (id ? '<button class="btn d" data-act="doc-del" data-id="' + id + '">Löschen</button>' : '<button class="btn ghost" data-act="close-sheet">Abbrechen</button>') +
-    '<button class="btn p" data-act="doc-save" data-id="' + (id || '') + '">Speichern</button></div>');
-}
-async function docSave(id){
-  const v = veh(); if (!v) return;
-  const title = val('d-title'); if (!title) return toast('Bitte einen Titel angeben.');
-  let d = db.docs.find(x => x.id === id);
-  if (!d){ d = { id: uid(), vehicleId: v.id }; db.docs.push(d); }
-  Object.assign(d, { title, category: val('d-cat'), date: val('d-date') || today(), notes: document.getElementById('d-notes').value.trim() });
-  const f = document.getElementById('d-file');
-  if (f && f.files[0]){
-    const file = f.files[0];
-    try {
-      if (file.type.startsWith('image')) d.fileData = await shrink(file, 1400, .8);
-      else if (file.size > 2e6) toast('PDF grösser als 2 MB – nur der Eintrag wurde gespeichert.');
-      else d.fileData = await readAsData(file);
-      d.fileName = file.name; d.fileType = file.type;
-    } catch(e){ toast(e.message); }
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-dashboard').classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === 'dashboard'));
+  try {
+    await Promise.all([renderDashboard(), refreshPinRowLabel()]);
+  } catch (err) {
+    console.error('RidePilot Init-Fehler:', err);
+    showStorageError('vehicleCard');
+    toast('Lokaler Speicher nicht verfügbar');
   }
-  /* Speicher hat ein Limit – lieber jetzt melden als still verlieren */
-  const ok = await store.set(db);
-  if (!ok){
-    delete d.fileData; delete d.fileName;
-    await store.set(db);
-    closeSheet(); render();
-    return toast('Datei zu gross für den Speicher – Eintrag ohne Anhang gesichert.');
-  }
-  closeSheet(); render(); toast('Dokument gespeichert');
+});
+
+function renderGreeting() {
+  const h = new Date().getHours();
+  document.getElementById('greeting').textContent = h < 11 ? 'Guten Morgen' : h < 18 ? 'Guten Tag' : 'Guten Abend';
+  document.getElementById('topdate').textContent = new Date().toLocaleDateString('de-CH', { timeZone:'Europe/Zurich', weekday:'long', day:'2-digit', month:'long' });
 }
 
-/* --- PDF --- */
-function vPdf(){
-  const v = veh(); if (!v) return vSetupPrompt();
-  let h = head('PDF', 'Bericht erzeugen und drucken oder als PDF sichern');
-  h += '<div class="card"><div class="card-h"><span class="eyebrow">Umfang wählen</span></div>' +
-    '<div class="quick" style="grid-template-columns:1fr 1fr">' +
-      qa('pdf-all', I.pdf, 'Gesamtbericht') +
-      qa('pdf-vehicle', I.scoot, 'Nur Fahrzeugdaten') +
-      qa('pdf-maint', I.wrench, 'Nur Wartungen') +
-      qa('pdf-trips', I.route, 'Nur Fahrten') +
-    '</div>' +
-    '<div class="hint" style="color:var(--muted);font-size:13px;margin-top:14px">Der Bericht öffnet den Druckdialog. Dort „Als PDF sichern“ wählen – funktioniert auf iOS, Android, macOS und Windows ohne Zusatz-App.</div></div>';
-  h += '<div class="card"><div class="card-h"><span class="eyebrow">Dokumentenübersicht</span></div>' +
-    '<div style="color:var(--muted);font-size:14px">' + byV(db.docs).length + ' Einträge werden als Liste (Titel, Kategorie, Datum) mitgedruckt. Angehängte Dateien selbst bleiben in der App.</div>' +
-    '<button class="btn wide ghost" style="margin-top:14px" data-act="pdf-docs">Nur Dokumentenübersicht</button></div>';
-  return h;
-}
-function buildPrint(scope){
-  const v = veh(); const p = $('#print');
-  const now = new Date().toLocaleString('de-CH');
-  const tbl = (cols, rows) => '<table><thead><tr>' + cols.map(c => '<th>' + c + '</th>').join('') + '</tr></thead><tbody>' +
-    (rows.length ? rows.map(r => '<tr>' + r.map(c => '<td>' + esc(c ?? '') + '</td>').join('') + '</tr>').join('')
-                 : '<tr><td colspan="' + cols.length + '">Keine Einträge</td></tr>') + '</tbody></table>';
-  let h = '<h1>RidePilot Bericht</h1><div class="meta">' + esc(v.name || (v.make + ' ' + v.model)) + ' · ' + esc(v.plate || 'ohne Kennzeichen') + ' · Stand ' + nKm(v.odo) + ' ' + U() + '</div>' +
-          '<div class="meta">Erstellt ' + now + '</div>';
-  if (scope === 'all' || scope === 'vehicle'){
-    h += '<h2>Fahrzeugdaten</h2>' + tbl(['Feld','Wert'], [
-      ['Name', v.name], ['Hersteller', v.make], ['Modell', v.model], ['Baujahr', v.year], ['Farbe', v.color],
-      ['Kennzeichen', v.plate], ['VIN', v.vin], ['Kilometerstand', nKm(v.odo) + ' ' + U()],
-      ['Versicherung', v.insurer], ['Police', v.policy], ['Gültig bis', v.insuranceUntil ? fDate(v.insuranceUntil) : ''],
-      ['Batterie', v.batteryHealth ? v.batteryHealth + ' %' : ''], ['Servicepartner', v.servicePartner], ['Notizen', v.notes]
-    ].filter(r => r[1]));
-  }
-  if (scope === 'all' || scope === 'maint'){
-    h += '<h2>Wartungen</h2>' + tbl(['Datum','Art','Stand','Werkstatt','Kosten CHF','Notiz'],
-      sortD(byV(db.maint)).map(m => [fDate(m.date), MTYPES[m.type] ? MTYPES[m.type].l : m.type, nKm(m.odo) + ' ' + U(), m.shop, m.cost, m.notes]));
-    const d = dueList();
-    if (d.length) h += '<h2>Nächste Fälligkeiten</h2>' + tbl(['Art','Fällig am','Fällig bei','Status'],
-      d.map(x => [x.label, x.dueDate ? fDate(x.dueDate) : '–', x.dueKm ? nKm(x.dueKm) + ' ' + U() : '–',
-        x.st === 'bad' ? 'überfällig' : x.st === 'warn' ? 'bald' : 'ok']));
-  }
-  if (scope === 'all' || scope === 'trips'){
-    const t = sortD(byV(db.trips));
-    h += '<h2>Fahrten</h2>' + tbl(['Datum','Start','Ziel','Distanz','Dauer','Notiz'],
-      t.map(x => [fDate(x.date), x.from, x.to, nKm(+x.distance) + ' ' + U(), x.duration ? x.duration + ' Min.' : '', x.notes]));
-    h += '<div class="meta" style="margin-top:3mm">Total ' + nKm(t.reduce((s, x) => s + (+x.distance || 0), 0)) + ' ' + U() + ' aus ' + t.length + ' Fahrten</div>';
-  }
-  if (scope === 'all' || scope === 'docs'){
-    h += '<h2>Dokumentenübersicht</h2>' + tbl(['Datum','Titel','Kategorie','Datei','Notiz'],
-      sortD(byV(db.docs)).map(d => [fDate(d.date), d.title, d.category, d.fileName || '–', d.notes]));
-  }
-  p.innerHTML = h;
-  sheet('<h2>Bericht bereit</h2>' +
-    '<div class="lead">Unten die Vorschau. „Drucken" öffnet den Systemdialog – dort „Als PDF sichern" wählen.</div>' +
-    '<div class="preview">' + h + '</div>' +
-    '<div class="actions"><button class="btn ghost" data-act="close-sheet">Schliessen</button>' +
-    '<button class="btn p" data-act="print-now">Drucken / Als PDF</button></div>' +
-    '<div class="hint" style="margin-top:10px;color:var(--muted);font-size:12.5px">Erscheint kein Druckdialog, ist die Vorschau-Umgebung eingeschränkt. Auf ridepilot.ch funktioniert er normal.</div>');
+/* ============ Navigation ============ */
+function setView(name) {
+  if (rideActive && name !== 'dashboard' && name !== 'fahrten') { /* Navigation während Fahrt bleibt möglich, aber Fahrtmodus hat Vorrang als Overlay */ }
+  currentView = name;
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === name));
+  window.scrollTo(0,0);
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'fahrten') renderFahrten();
+  if (name === 'wartung') renderWartung();
+  if (name === 'dokumente') renderDokumente();
+  if (name === 'einstellungen') renderEinstellungen();
 }
 
-/* --- Einstellungen --- */
-function vSettings(){
-  const s = db.settings;
-  let h = head('Einstellungen', 'Darstellung, Einheiten, Sicherheit');
-  h += '<div class="card"><div class="card-h"><span class="eyebrow">Darstellung</span></div>' +
-    '<div class="seg" role="group">' + ['system','light','dark'].map(t =>
-      '<button data-act="theme" data-arg="' + t + '" aria-pressed="' + (s.theme === t) + '">' +
-      ({ system:'System', light:'Hell', dark:'Dunkel' }[t]) + '</button>').join('') + '</div>' +
-    '<div class="card-h" style="margin:18px 0 10px"><span class="eyebrow">Einheiten</span></div>' +
-    '<div class="seg">' + ['km','mi'].map(u =>
-      '<button data-act="units" data-arg="' + u + '" aria-pressed="' + (s.units === u) + '">' +
-      (u === 'km' ? 'Kilometer' : 'Meilen') + '</button>').join('') + '</div></div>';
-  h += '<div class="list" style="margin-top:14px">' +
-    rowHTML({ act:'lang', t:'Sprache', s:'Deutsch (Schweiz)', v:'DE', icon:I.doc }) +
-    rowHTML({ act:'jbl-set', t:'JBL Portable Verknüpfung', s:s.jbl ? s.jbl : 'Noch kein Link hinterlegt', icon:I.speaker }) +
-    rowHTML({ act:'pin-change', t:'PIN ändern', s:s.pinChanged ? 'Eigener PIN aktiv' : 'Standard-PIN 1234 – bitte ändern', icon:I.lock, tone:s.pinChanged ? '' : 'w' }) +
-    rowHTML({ act:'go', arg:'backup', t:'Backup und Export', s:'Sichern, wiederherstellen, PDF', icon:I.backup }) +
-    rowHTML({ act:'manager', t:'Managerbereich', s:'PIN erforderlich', icon:I.shield, tone:'d' }) + '</div>';
-  h += '<div class="card" style="margin-top:14px"><div class="card-h"><span class="eyebrow">Datenschutz</span></div>' +
-    '<div style="color:var(--muted);font-size:14px">Alle Daten liegen ausschliesslich auf diesem Gerät. Es gibt keine Konten, keine Server-Synchronisation und keine Analyse-Tools. Damit erhebt RidePilot keine Personendaten im Sinne von DSG und DSGVO – ein Backup ist deshalb deine Verantwortung.</div>' +
-    '<button class="btn wide ghost" style="margin-top:14px" data-act="go" data-arg="backup">Jetzt Backup erstellen</button></div>';
-  h += '<div class="empty" style="padding:26px 8px"><div style="font-size:12px">RidePilot v1.0 · ridepilot.ch</div></div>';
-  return h;
+/* ============ Modal helpers ============ */
+function openModal(html) {
+  document.getElementById('modalContent').innerHTML = '<div class="modal-handle"></div><button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>' + html;
+  document.getElementById('modalBg').classList.add('open');
 }
+function closeModal() { document.getElementById('modalBg').classList.remove('open'); }
 
-/* --- Backup --- */
-function vBackup(){
-  let h = head('Backup', 'Sichern und wiederherstellen');
-  const size = new Blob([JSON.stringify(db)]).size;
-  h += '<div class="card"><div class="card-h"><span class="eyebrow">Datenbestand</span></div>' +
-    '<div class="stats"><div class="stat"><div class="k">Fahrzeuge</div><div class="v num">' + db.vehicles.length + '</div></div>' +
-    '<div class="stat"><div class="k">Fahrten</div><div class="v num">' + db.trips.length + '</div></div>' +
-    '<div class="stat"><div class="k">Wartungen</div><div class="v num">' + db.maint.length + '</div></div>' +
-    '<div class="stat"><div class="k">Dokumente</div><div class="v num">' + db.docs.length + '</div></div></div>' +
-    '<div style="color:var(--muted);font-size:13px;margin-top:12px">Grösse ' + (size / 1024).toFixed(0) + ' KB</div></div>';
-  h += '<div class="card"><div class="card-h"><span class="eyebrow">Sichern</span></div>' +
-    '<div style="color:var(--muted);font-size:14px;margin-bottom:14px">Eine JSON-Datei mit allen Fahrzeugen, Fahrten, Wartungen und Dokumenten. Bewahre sie ausserhalb des Geräts auf.</div>' +
-    '<button class="btn p wide" data-act="exp-json">Backup herunterladen</button>' +
-    '<button class="btn wide ghost" style="margin-top:10px" data-act="exp-csv">Fahrten als CSV</button>' +
-    '<button class="btn wide ghost" style="margin-top:10px" data-act="go" data-arg="pdf">PDF-Bericht erstellen</button></div>';
-  h += '<div class="card"><div class="card-h"><span class="eyebrow">Wiederherstellen</span></div>' +
-    '<div style="color:var(--muted);font-size:14px;margin-bottom:14px">Ein Import ersetzt den gesamten aktuellen Bestand. Der Managerbereich fragt vorher nach dem PIN.</div>' +
-    '<button class="btn wide d" data-act="import-start">Backup einspielen</button></div>';
-  return h;
+/* ============ Dashboard / Restreichweite ============ */
+async function getTotalKm(trips) {
+  return trips.reduce((s,t) => s + (t.distanceKm||0), 0);
 }
-let lastExport = null;
-function download(name, content, mime){
-  lastExport = { name, content, mime };
-  const kb = (content.length / 1024).toFixed(0);
-  const preview = content.length > 60000
-    ? content.slice(0, 60000) + '\n\n… gekürzt. Vollständig nur über den Download.'
-    : content;
-  sheet('<h2>Datei bereit</h2><div class="lead">' + esc(name) + ' · ' + kb + ' KB</div>' +
-    '<button class="btn p wide" data-act="dl-now">Herunterladen</button>' +
-    '<button class="btn wide ghost" style="margin-top:10px" data-act="dl-copy">Inhalt kopieren</button>' +
-    '<div class="f" style="margin-top:16px"><label>Inhalt – falls der Download blockiert wird</label>' +
-    '<textarea readonly style="min-height:160px;font-family:var(--font-data);font-size:11px">' + esc(preview) + '</textarea></div>' +
-    '<button class="btn wide ghost" data-act="close-sheet">Schliessen</button>');
+async function getLatestCalibration() {
+  const cals = await idbGetAll('calibrations');
+  if (!cals.length) return null;
+  return cals.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
 }
-function doDownload(){
-  if (!lastExport) return;
-  try{
-    const b = new Blob([lastExport.content], { type: lastExport.mime });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(b); a.download = lastExport.name;
-    document.body.appendChild(a); a.click();
-    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
-    toast('Download gestartet: ' + lastExport.name);
-  } catch(e){ toast('Download blockiert – Inhalt unten kopieren.'); }
-}
+async function renderDashboard() {
+ try {
+  allTrips = await idbGetAll('trips');
+  const totalKm = await getTotalKm(allTrips);
+  const cal = await getLatestCalibration();
+  const gaugeNum = document.getElementById('gaugeNum');
+  const gaugeMeta = document.getElementById('gaugeMeta');
+  const fill = document.getElementById('gaugeFill');
+  const PATH_LEN = 251.33;
 
-/* --- Manager --- */
-function vManager(){
-  let h = head('Managerbereich', 'Geschützte Aktionen', '<span class="badge bad">PIN</span>');
-  h += '<div class="card"><div class="card-h"><span class="eyebrow">Fahrzeuge</span></div>' +
-    (db.vehicles.length ? '<div class="list" style="box-shadow:none;border:none">' + db.vehicles.map(v =>
-      rowHTML({ act:'veh-del', id:v.id, t:v.name || (v.make + ' ' + v.model), s:'Löschen inkl. Fahrten, Wartungen, Dokumente', icon:I.scoot, tone:'d' })).join('') + '</div>'
-      : '<div style="color:var(--muted);font-size:14px">Keine Fahrzeuge.</div>') + '</div>';
-  h += '<div class="card"><div class="card-h"><span class="eyebrow">Daten</span></div>' +
-    '<button class="btn wide ghost" data-act="import-start">Backup wiederherstellen</button>' +
-    '<button class="btn wide d" style="margin-top:10px" data-act="reset">Datenbank zurücksetzen</button></div>';
-  h += '<div class="card"><div class="card-h"><span class="eyebrow">Entwickleroptionen</span></div>' +
-    '<button class="btn wide ghost" data-act="seed">Demodaten einfügen</button>' +
-    '<button class="btn wide ghost" style="margin-top:10px" data-act="raw">Rohdaten anzeigen</button>' +
-    '<div style="color:var(--muted);font-size:13px;margin-top:12px">Speicher: ' + (window.storage ? 'App-Speicher' : 'Gerätespeicher des Browsers') + '</div></div>';
-  return h;
-}
-let managerOK = false;
-function askPin(then){
-  let buf = '';
-  const draw = () => { const d = document.querySelectorAll('.pindots i'); d.forEach((x, i) => x.classList.toggle('on', i < buf.length)); };
-  sheet('<h2>PIN eingeben</h2><div class="lead">Der Managerbereich ist geschützt.</div>' +
-    '<div class="pindots"><i></i><i></i><i></i><i></i></div>' +
-    '<div class="pinpad">' + [1,2,3,4,5,6,7,8,9].map(n => '<button data-pin="' + n + '">' + n + '</button>').join('') +
-    '<button data-pin="del">←</button><button data-pin="0">0</button><button data-act="close-sheet">Weg</button></div>');
-  document.querySelector('.sheet').addEventListener('click', e => {
-    const b = e.target.closest('[data-pin]'); if (!b) return;
-    const k = b.dataset.pin;
-    if (k === 'del') buf = buf.slice(0, -1); else if (buf.length < 4) buf += k;
-    draw();
-    if (buf.length === 4){
-      if (buf === db.settings.pin){ managerOK = true; closeSheet(); then(); }
-      else { buf = ''; draw(); toast('Falscher PIN'); }
+  if (!cal) {
+    gaugeNum.textContent = '–';
+    gaugeMeta.textContent = 'Noch keine Anzeige hinterlegt';
+    fill.style.opacity = '0';
+  } else {
+    fill.style.opacity = '1';
+    const remaining = cal.value - (totalKm - cal.odometerAtCalibration);
+    const pct = cal.value > 0 ? Math.max(0, Math.min(100, (remaining / cal.value) * 100)) : 0;
+    fill.style.strokeDasharray = `${PATH_LEN} ${PATH_LEN}`;
+    fill.style.strokeDashoffset = `${PATH_LEN * (1 - pct/100)}`;
+    if (remaining <= 0) {
+      gaugeNum.textContent = '0';
+      fill.style.stroke = 'var(--danger)';
+      gaugeMeta.innerHTML = '<span style="color:var(--danger);font-weight:700;">Bitte Anzeige aktualisieren</span>';
+    } else {
+      gaugeNum.textContent = fmtKm(remaining);
+      fill.style.stroke = pct <= 15 ? 'var(--danger)' : pct <= 40 ? 'var(--warn)' : 'var(--accent)';
+      gaugeMeta.textContent = `Stand vom ${fmtDateTime(cal.timestamp)} · ${fmtKm(cal.value)} km bei ${fmtKm(cal.odometerAtCalibration)} km Gesamtstrecke`;
     }
-  });
-}
-
-/* --- Onboarding --- */
-function vWelcome(){
-  return '<div style="padding:8vh 0 0">' +
-    '<div class="brand" style="padding-left:0"><span class="m">R</span><span class="n">RidePilot</span></div>' +
-    '<h1 class="display" style="font-size:38px;font-weight:800;line-height:1.05;margin:18px 0 12px">Dein Roller,<br>vollständig dokumentiert.</h1>' +
-    '<p style="color:var(--muted);font-size:16px;max-width:38ch">Kilometerstand, Fahrtenbuch, Wartungsintervalle, Police und Rechnungen. Offline nutzbar, alles bleibt auf deinem Gerät.</p>' +
-    '<div class="list" style="margin:26px 0">' +
-      rowHTML({ act:'noop', t:'Wartung im Blick', s:'Intervalle nach Monaten und ' + U(), icon:I.wrench, tone:'g' }) +
-      rowHTML({ act:'noop', t:'Alles offline', s:'Kein Konto, keine Cloud, kein Tracking', icon:I.shield, tone:'g' }) +
-      rowHTML({ act:'noop', t:'Bericht als PDF', s:'Für Werkstatt, Käufer oder Versicherung', icon:I.pdf, tone:'g' }) +
-    '</div>' +
-    '<button class="btn p wide" data-act="veh-new">Ersten Roller anlegen</button>' +
-    '<div class="empty" style="padding:22px 0"><div style="font-size:12px">Vorbelegt für Volta VSX · später beliebig viele Fahrzeuge</div></div></div>';
-}
-
-/* ---------- 8. Fahrmodus mit GPS-Aufzeichnung (Signature) --- */
-let rideT, rideStart, wake = null, watchId = null, rideTrack = [], rideKm = 0, rideSpeed = 0, gpsState = 'aus';
-function rideOn(){
-  const v = veh(); if (!v) return;
-  rideStart = Date.now(); rideTrack = []; rideKm = 0; rideSpeed = 0; gpsState = 'suche';
-  const r = $('#ride');
-  r.innerHTML = '<div class="live"><span class="dot"></span>Fahrmodus aktiv</div>' +
-    '<div class="clock num" id="ride-clock">0:00</div>' +
-    '<div class="ridestats">' +
-      '<div><div class="k">Strecke</div><div class="v num" id="ride-km">0.0</div><div class="u">' + U() + '</div></div>' +
-      '<div><div class="k">Tempo</div><div class="v num" id="ride-spd">–</div><div class="u">' + (db.settings.units === 'mi' ? 'mph' : 'km/h') + '</div></div>' +
-    '</div>' +
-    '<div class="meta" id="ride-gps">GPS wird gesucht …</div>' +
-    '<div class="meta">' + esc(v.name || (v.make + ' ' + v.model)) + ' · ' + esc(v.plate || '') + '</div>' +
-    '<div class="hold" id="ride-hold"><span class="ring"></span><span>Halten<br>zum Beenden</span></div>';
-  r.classList.add('on');
-  clearInterval(rideT);
-  rideT = setInterval(() => {
-    const s = Math.floor((Date.now() - rideStart) / 1000);
-    const el = document.getElementById('ride-clock');
-    if (el) el.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
-  }, 500);
-  if (navigator.wakeLock) navigator.wakeLock.request('screen').then(w => wake = w).catch(() => {});
-  startGPS();
-  bindHold();
-}
-function startGPS(){
-  const g = document.getElementById('ride-gps');
-  if (!navigator.geolocation){
-    gpsState = 'fehlt'; if (g) g.textContent = 'Dieses Gerät liefert keine Standortdaten.'; return;
   }
-  watchId = navigator.geolocation.watchPosition(pos => {
-    const p = { lat:+pos.coords.latitude.toFixed(5), lng:+pos.coords.longitude.toFixed(5), t:Date.now() };
-    if (pos.coords.accuracy > 60) return;                    // grobe Messungen verwerfen
-    const last = rideTrack[rideTrack.length - 1];
-    if (last && dist(last, p) < 8) return;                   // Stillstand nicht mitschreiben
-    if (last) rideKm += dist(last, p) / 1000;
-    rideTrack.push(p);
-    rideSpeed = pos.coords.speed != null && pos.coords.speed >= 0 ? pos.coords.speed * 3.6 : rideSpeed;
-    gpsState = 'aktiv';
-    const km = document.getElementById('ride-km'), sp = document.getElementById('ride-spd'), gg = document.getElementById('ride-gps');
-    if (km) km.textContent = toU(rideKm).toFixed(1);
-    if (sp) sp.textContent = rideSpeed ? Math.round(toU(rideSpeed)) : '–';
-    if (gg) gg.textContent = 'GPS aktiv · ' + rideTrack.length + ' Punkte · ±' + Math.round(pos.coords.accuracy) + ' m';
-  }, err => {
-    gpsState = 'verweigert';
-    const gg = document.getElementById('ride-gps');
-    if (gg) gg.textContent = err.code === 1
-      ? 'Standort nicht freigegeben – nur Zeit wird erfasst.'
-      : 'Kein GPS-Empfang – nur Zeit wird erfasst.';
-  }, { enableHighAccuracy:true, maximumAge:2000, timeout:15000 });
-}
-function bindHold(){
-  const h = document.getElementById('ride-hold'); if (!h) return;
-  let t0 = 0, raf;
-  const step = () => {
-    const p = Math.min(100, (Date.now() - t0) / 2000 * 100);
-    h.style.setProperty('--p', p);
-    if (p >= 100) return rideOff();
-    raf = requestAnimationFrame(step);
-  };
-  const start = e => { e.preventDefault(); t0 = Date.now(); step(); };
-  const stop = () => { cancelAnimationFrame(raf); h.style.setProperty('--p', 0); };
-  h.addEventListener('pointerdown', start); h.addEventListener('pointerup', stop);
-  h.addEventListener('pointerleave', stop); h.addEventListener('pointercancel', stop);
-}
-function rideOff(){
-  clearInterval(rideT);
-  if (watchId != null){ navigator.geolocation.clearWatch(watchId); watchId = null; }
-  $('#ride').classList.remove('on'); $('#ride').innerHTML = '';
-  if (wake){ try { wake.release(); } catch(e){} wake = null; }
-  const min = Math.round((Date.now() - rideStart) / 60000);
-  const km = rideTrack.length > 1 ? trackLength(rideTrack) : 0;
-  if (min < 1 && km < 0.1) return toast('Fahrt zu kurz – nichts erfasst.');
-  const track = rideTrack.slice();
-  tripSheet(null, { duration: min, km, track });
-  toast(km ? 'Fahrt beendet · ' + toU(km).toFixed(1) + ' ' + U() + ' aufgezeichnet' : 'Fahrt beendet · ' + min + ' Min.');
+
+  // Kalibrierungs-Verlauf
+  const cals = (await idbGetAll('calibrations')).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0,8);
+  const histWrap = document.getElementById('calibHistoryWrap');
+  const hist = document.getElementById('calibHistory');
+  if (!cals.length) { histWrap.style.display = 'none'; }
+  else {
+    histWrap.style.display = '';
+    hist.innerHTML = cals.map(c => `<div class="history-row"><span>${fmtDateTime(c.timestamp)}</span><span>${fmtKm(c.value)} km</span></div>`).join('');
+  }
+
+  // Abend-Erinnerung
+  const banner = document.getElementById('eveningBanner');
+  const now = new Date();
+  const isEvening = now.getHours() >= 20;
+  const calToday = cal && new Date(cal.timestamp).toDateString() === now.toDateString();
+  const rodeSinceCal = cal && (totalKm - cal.odometerAtCalibration) > 0.05;
+  if (isEvening && !calToday && (rodeSinceCal || !cal)) {
+    banner.innerHTML = `<div class="banner"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><div><p>Heute gefahren? Trag jetzt die aktuelle Roller-Anzeige ein, damit die Reichweite morgen stimmt.</p></div></div>`;
+  } else banner.innerHTML = '';
+
+  // Fahrzeug-Karte
+  const v = await idbGet('vehicle', 'main');
+  document.getElementById('vehicleTitle').textContent = (v && v.name) ? v.name : 'Volta VSX';
+  document.getElementById('vehicleSub').textContent = `${fmtKm(totalKm)} km Gesamtstrecke${v && v.plate ? ' · ' + v.plate : ''}`;
+
+  // Wartungs-Hinweis
+  const maint = await idbGetAll('maintenance');
+  const due = maint.filter(m => maintStatus(m, totalKm).level !== 'ok');
+  const wrap = document.getElementById('maintAlertWrap');
+  if (due.length) {
+    wrap.innerHTML = `<div class="section-title">Wartung</div><div class="card card-tight">` + due.slice(0,3).map(m => {
+      const st = maintStatus(m, totalKm);
+      return `<div class="link-row" onclick="setView('wartung')" style="cursor:pointer;"><span class="l">${m.title}</span><span class="pill pill-${st.level==='overdue'?'danger':'warn'}">${st.text}</span></div>`;
+    }).join('') + `</div>`;
+  } else wrap.innerHTML = '';
+ } catch (err) {
+  console.error('renderDashboard:', err);
+  document.getElementById('gaugeNum').textContent = '–';
+  document.getElementById('gaugeMeta').textContent = 'Nicht verfügbar';
+  showStorageError('vehicleCard');
+ }
 }
 
-/* ---------- 9. Render ------------------------------------ */
-function render(){
-  applyTheme();
-  const app = $('#app');
-  if (!db.settings.onboarded && !db.vehicles.length){
-    app.innerHTML = '<div class="shell"><div class="main">' + vWelcome() + '</div></div>';
+async function submitCalibration() {
+  const input = document.getElementById('calibInput');
+  const val = parseFloat(input.value);
+  if (isNaN(val) || val < 0) { toast('Bitte gültigen Wert eingeben'); return; }
+  const trips = await idbGetAll('trips');
+  const totalKm = await getTotalKm(trips);
+  await idbPut('calibrations', { value: val, odometerAtCalibration: totalKm, timestamp: new Date().toISOString() });
+  input.value = '';
+  toast('Reichweite aktualisiert');
+  renderDashboard();
+}
+
+/* ============ Fahrten / Ride-Tracking ============ */
+let rideActive = false, rideStart = null, rideDistance = 0, rideLastPos = null, watchId = null, rideTimerInt = null, ridePhotos = [];
+
+function startRide() {
+  if (rideActive) return;
+  rideActive = true; rideStart = Date.now(); rideDistance = 0; rideLastPos = null; ridePhotos = [];
+  document.getElementById('rmTimer').textContent = '00:00';
+  document.getElementById('rmDist').textContent = '0.0';
+  document.getElementById('rmShots').textContent = '';
+  document.getElementById('rmGpsStatus').textContent = 'GPS wird gesucht …';
+  document.getElementById('ridemode').classList.add('open');
+
+  rideTimerInt = setInterval(() => {
+    const s = Math.floor((Date.now() - rideStart) / 1000);
+    const mm = String(Math.floor(s/60)).padStart(2,'0'), ss = String(s%60).padStart(2,'0');
+    document.getElementById('rmTimer').textContent = `${mm}:${ss}`;
+  }, 1000);
+
+  if ('geolocation' in navigator) {
+    watchId = navigator.geolocation.watchPosition(pos => {
+      document.getElementById('rmGpsStatus').textContent = `GPS aktiv · Genauigkeit ±${Math.round(pos.coords.accuracy)} m`;
+      const { latitude, longitude } = pos.coords;
+      if (rideLastPos) {
+        const d = haversine(rideLastPos.lat, rideLastPos.lng, latitude, longitude);
+        if (d > 0.003 && d < 0.5) { rideDistance += d; document.getElementById('rmDist').textContent = fmtKm(rideDistance); }
+      }
+      rideLastPos = { lat: latitude, lng: longitude };
+    }, err => {
+      document.getElementById('rmGpsStatus').textContent = 'GPS nicht verfügbar – Distanz manuell erfassen';
+    }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 12000 });
+  } else {
+    document.getElementById('rmGpsStatus').textContent = 'GPS auf diesem Gerät nicht verfügbar';
+  }
+}
+
+function triggerRidePhoto() { document.getElementById('ridePhotoInput').click(); }
+function handleRidePhoto(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => { ridePhotos.push(reader.result); document.getElementById('rmShots').textContent = `${ridePhotos.length} Foto${ridePhotos.length>1?'s':''} hinzugefügt`; };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+async function stopRide() {
+  clearInterval(rideTimerInt);
+  if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+  const durationSec = Math.floor((Date.now() - rideStart) / 1000);
+  const distance = rideDistance;
+  rideActive = false;
+  document.getElementById('ridemode').classList.remove('open');
+
+  if (distance < 0.05 && durationSec < 30) { toast('Fahrt zu kurz – nicht gespeichert'); return; }
+
+  await idbPut('trips', {
+    startTime: new Date(rideStart).toISOString(),
+    endTime: new Date().toISOString(),
+    durationSec, distanceKm: Math.round(distance*100)/100,
+    photos: ridePhotos, note: '', type: ridePhotos.length ? 'incident' : 'normal', manual: false
+  });
+  toast(`Fahrt gespeichert · ${fmtKm(distance)} km`);
+  if (currentView === 'fahrten') renderFahrten();
+  if (currentView === 'dashboard') renderDashboard();
+}
+
+function openManualTrip() {
+  openModal(`
+    <h2>Fahrt manuell erfassen</h2>
+    <div class="desc">Für Fahrten ohne GPS-Aufzeichnung.</div>
+    <label for="mDate">Datum</label>
+    <input type="date" id="mDate" value="${new Date().toISOString().slice(0,10)}">
+    <label for="mKm">Distanz (km)</label>
+    <input type="number" id="mKm" inputmode="decimal" step="0.1" placeholder="z. B. 8.5">
+    <label for="mNote">Notiz (optional)</label>
+    <input type="text" id="mNote" placeholder="z. B. Fahrt zur Arbeit">
+    <button class="btn btn-primary" style="margin-top:18px;" onclick="saveManualTrip()">Speichern</button>
+  `);
+}
+async function saveManualTrip() {
+  const km = parseFloat(document.getElementById('mKm').value);
+  const date = document.getElementById('mDate').value;
+  const note = document.getElementById('mNote').value.trim();
+  if (isNaN(km) || km <= 0) { toast('Bitte gültige Distanz eingeben'); return; }
+  await idbPut('trips', { startTime: new Date(date).toISOString(), endTime: new Date(date).toISOString(), durationSec: 0, distanceKm: km, photos: [], note, type: 'normal', manual: true });
+  closeModal(); toast('Fahrt gespeichert'); renderFahrten(); if (document.getElementById('view-dashboard').classList.contains('active')) renderDashboard();
+}
+
+async function renderFahrten() {
+ try {
+  const trips = (await idbGetAll('trips')).sort((a,b) => new Date(b.startTime) - new Date(a.startTime));
+  const wrap = document.getElementById('tripList');
+  if (!trips.length) {
+    wrap.innerHTML = `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20 3 17V4l6 3 6-3 6 3v13l-6-3-6 3z"/></svg><div class="t">Noch keine Fahrten</div><div class="s">Starte deine erste Fahrt oder erfasse sie manuell.</div></div>`;
     return;
   }
-  const body = ({
-    dashboard:vDashboard, vehicles:vVehicles, trips:vTrips, maintenance:vMaint,
-    docs:vDocs, pdf:vPdf, settings:vSettings, backup:vBackup, manager:vManager
-  }[view] || vDashboard)();
-
-  const side = '<nav class="side"><div class="brand"><span class="m">R</span><span class="n">RidePilot</span></div>' +
-    NAV.map(([k, l, i]) => '<button class="nav" data-act="go" data-arg="' + k + '" aria-current="' + (view === k) + '">' + svg(i, 20) + '<span>' + l + '</span></button>').join('') +
-    '<div style="flex:1"></div><button class="btn p" data-act="ride-on" style="margin:0 6px">' + svg(I.bolt, 18) + ' Fahrmodus</button></nav>';
-
-  const tab = '<nav class="tabbar">' + TABS.map(([k, l, i]) =>
-    '<button class="tab" data-act="' + (k === 'more' ? 'more' : 'go') + '" data-arg="' + k + '" aria-current="' +
-    (view === k || (k === 'more' && ['vehicles','pdf','settings','backup','manager'].includes(view))) + '">' + svg(i, 22) + '<span>' + l + '</span></button>').join('') + '</nav>';
-
-  app.innerHTML = '<div class="shell">' + side + '<main class="main">' + body + '</main></div>' + tab;
-  window.scrollTo(0, 0);
+  wrap.innerHTML = `<div class="card card-tight">` + trips.map(t => `
+    <div class="list-row" style="cursor:pointer;" onclick='showTripDetail(${t.id})'>
+      <div class="icon">${t.type==='incident' ? '<svg viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>'}</div>
+      <div class="main">
+        <div class="title">${fmtDate(t.startTime)}${t.manual ? ' · manuell' : ''}</div>
+        <div class="sub">${t.durationSec>0 ? fmtDuration(t.durationSec) : (t.note || 'Ohne Notiz')}</div>
+      </div>
+      <div class="trail">${fmtKm(t.distanceKm)} km</div>
+    </div>`).join('') + `</div>`;
+ } catch (err) { console.error('renderFahrten:', err); showStorageError('tripList'); }
 }
-function go(v){ view = v; render(); }
+async function showTripDetail(id) {
+  const t = await idbGet('trips', id);
+  if (!t) return;
+  openModal(`
+    <h2>${fmtDate(t.startTime)}</h2>
+    <div class="desc">${t.durationSec>0 ? fmtDuration(t.durationSec) + ' · ' : ''}${fmtKm(t.distanceKm)} km</div>
+    ${t.note ? `<div class="card card-tight" style="margin-bottom:12px;">${t.note}</div>` : ''}
+    ${(t.photos||[]).map(p => `<img src="${p}" style="width:100%;border-radius:14px;margin-bottom:10px;">`).join('')}
+    <button class="btn btn-danger" onclick="deleteTrip(${id})">Fahrt löschen</button>
+  `);
+}
+async function deleteTrip(id) { await idbDelete('trips', id); closeModal(); toast('Fahrt gelöscht'); renderFahrten(); if (document.getElementById('view-dashboard').classList.contains('active')) renderDashboard(); }
 
-/* ---------- 10. Aktionen --------------------------------- */
-document.addEventListener('click', async e => {
-  const el = e.target.closest('[data-act]'); if (!el) return;
-  const a = el.dataset.act, id = el.dataset.id, arg = el.dataset.arg;
-
-  switch (a){
-    case 'close-sheet': closeSheet(); break;
-    case 'noop': break;
-    case 'go': closeSheet(); go(arg); break;
-    case 'more': sheet('<h2>Mehr</h2><div class="list" style="box-shadow:none;border:none">' +
-        [['vehicles','Roller',I.scoot],['pdf','PDF-Bericht',I.pdf],['settings','Einstellungen',I.gear],['backup','Backup',I.backup]]
-        .map(([k, l, i]) => rowHTML({ act:'go', arg:k, t:l, icon:i })).join('') + '</div>'); break;
-
-    case 'veh-new': vehSheet(); break;
-    case 'veh-open': vehSheet(id); break;
-    case 'veh-save': await vehSave(id); break;
-    case 'veh-activate': db.activeId = id; save(); closeSheet(); go('dashboard'); toast('Aktiver Roller gewechselt'); break;
-    case 'veh-del': {
-      const v = db.vehicles.find(x => x.id === id); if (!v) break;
-      ask('Fahrzeug löschen?', (v.name || v.make) + ' samt Fahrten, Wartungen und Dokumenten wird unwiderruflich entfernt.', 'Endgültig löschen', () => {
-        db.vehicles = db.vehicles.filter(x => x.id !== id);
-        db.trips = db.trips.filter(t => t.vehicleId !== id);
-        db.maint = db.maint.filter(m => m.vehicleId !== id);
-        db.docs  = db.docs.filter(d => d.vehicleId !== id);
-        if (db.activeId === id) db.activeId = db.vehicles[0] ? db.vehicles[0].id : null;
-        save(); render(); toast('Fahrzeug gelöscht');
-      });
-      break;
-    }
-    case 'confirm-yes': { const f = pendingConfirm; pendingConfirm = null; closeSheet(); if (f) f(); break; }
-
-    case 'trip-new': tripSheet(); break;
-    case 'trip-open': tripSheet(id); break;
-    case 'trip-save': tripSave(id); break;
-    case 'trip-del': {
-      const t = db.trips.find(x => x.id === id); const v = veh();
-      if (t && v) v.odo = Math.max(0, (v.odo || 0) - (+t.distance || 0));
-      db.trips = db.trips.filter(x => x.id !== id); save(); closeSheet(); render(); toast('Fahrt gelöscht'); break;
-    }
-    case 'maint-new': maintSheet(); break;
-    case 'maint-new-type': maintSheet(null, arg); break;
-    case 'maint-open': maintSheet(id); break;
-    case 'maint-save': maintSave(id); break;
-    case 'maint-del': db.maint = db.maint.filter(x => x.id !== id); save(); closeSheet(); render(); toast('Eintrag gelöscht'); break;
-
-    case 'doc-new': docSheet(); break;
-    case 'doc-open': docSheet(id); break;
-    case 'doc-save': await docSave(id); break;
-    case 'doc-del': db.docs = db.docs.filter(x => x.id !== id); save(); closeSheet(); render(); toast('Dokument gelöscht'); break;
-
-    case 'odo-set': {
-      const v = veh();
-      sheet('<h2>Kilometerstand</h2><div class="lead">Aktueller Stand laut Tacho.</div>' +
-        fld('o-km','Stand (' + U() + ')', Math.round(toU(v.odo || 0)), '', 'number') +
-        '<div class="actions"><button class="btn ghost" data-act="close-sheet">Abbrechen</button>' +
-        '<button class="btn p" data-act="odo-save">Übernehmen</button></div>');
-      break;
-    }
-    case 'odo-save': { const v = veh(); v.odo = Math.round(fromU(+val('o-km') || 0)); save(); closeSheet(); render(); toast('Stand aktualisiert'); break; }
-
-    case 'ride-on': closeSheet(); rideOn(); break;
-    case 'jbl': {
-      const u = db.settings.jbl;
-      if (!u) { toast('Bitte zuerst den JBL-Link in den Einstellungen hinterlegen.'); go('settings'); break; }
-      window.location.href = u; break;
-    }
-    case 'jbl-set':
-      sheet('<h2>JBL Portable öffnen</h2>' +
-        '<div class="lead">Hinterlege den Link, mit dem die JBL-App auf deinem Gerät startet. Prüfe ihn einmal – App-Links unterscheiden sich je nach Version.</div>' +
-        fld('j-url','Link oder App-Schema', db.settings.jbl || '', 'jblportable://') +
-        '<div class="hint" style="margin-top:-6px">Alternativ ein normaler Store-Link. Auf iOS funktionieren App-Schemata nur, wenn die App installiert ist.</div>' +
-        '<div class="actions"><button class="btn ghost" data-act="close-sheet">Abbrechen</button>' +
-        '<button class="btn p" data-act="jbl-save">Speichern</button></div>');
-      break;
-    case 'jbl-save': db.settings.jbl = val('j-url'); save(); closeSheet(); render(); toast('Verknüpfung gespeichert'); break;
-
-    case 'theme': db.settings.theme = arg; save(); render(); break;
-    case 'units': db.settings.units = arg; save(); render(); break;
-    case 'lang': toast('Weitere Sprachen folgen in Phase 11.'); break;
-
-    case 'pin-change':
-      sheet('<h2>PIN ändern</h2><div class="lead">Vier Ziffern. Schützt den Managerbereich.</div>' +
-        fld('p-old','Aktueller PIN', '', '1234') + fld('p-new','Neuer PIN', '', '••••') +
-        '<div class="actions"><button class="btn ghost" data-act="close-sheet">Abbrechen</button>' +
-        '<button class="btn p" data-act="pin-save">Speichern</button></div>');
-      break;
-    case 'pin-save': {
-      if (val('p-old') !== db.settings.pin) return toast('Aktueller PIN stimmt nicht.');
-      const n = val('p-new');
-      if (!/^\d{4}$/.test(n)) return toast('Der neue PIN braucht genau vier Ziffern.');
-      db.settings.pin = n; db.settings.pinChanged = true; save(); closeSheet(); render(); toast('PIN geändert'); break;
-    }
-    case 'manager': managerOK ? go('manager') : askPin(() => go('manager')); break;
-
-    case 'pdf-all': buildPrint('all'); break;
-    case 'pdf-vehicle': buildPrint('vehicle'); break;
-    case 'pdf-maint': buildPrint('maint'); break;
-    case 'pdf-trips': buildPrint('trips'); break;
-    case 'pdf-docs': buildPrint('docs'); break;
-
-    case 'exp-json': download('ridepilot-backup-' + today() + '.json', JSON.stringify(db, null, 2), 'application/json'); break;
-    case 'exp-csv': {
-      const rows = [['Datum','Start','Ziel','Distanz ' + U(),'Dauer Min','Notizen']]
-        .concat(sortD(byV(db.trips)).map(t => [t.date, t.from, t.to, Math.round(toU(+t.distance || 0)), t.duration, (t.notes || '').replace(/[\r\n;]/g, ' ')]));
-      download('ridepilot-fahrten-' + today() + '.csv', '\uFEFF' + rows.map(r => r.join(';')).join('\n'), 'text/csv'); break;
-    }
-    case 'import-start':
-      if (!managerOK) { askPin(() => doImport()); } else doImport();
-      break;
-    case 'reset':
-      ask('Datenbank zurücksetzen?', 'Alle Fahrzeuge, Fahrten, Wartungen und Dokumente werden gelöscht. Nur ein Backup macht das rückgängig.', 'Alles löschen', () => {
-        db = fresh(); managerOK = false; save(); go('dashboard'); toast('Datenbank zurückgesetzt');
-      });
-      break;
-    case 'print-now': try { window.print(); } catch(e){ toast('Druckdialog gesperrt – bitte auf ridepilot.ch öffnen.'); } break;
-    case 'dl-now': doDownload(); break;
-    case 'dl-copy':
-      try { await navigator.clipboard.writeText(lastExport.content); toast('In die Zwischenablage kopiert'); }
-      catch(e){ toast('Kopieren gesperrt – Text unten von Hand markieren.'); }
-      break;
-    case 'seed': seed(); break;
-    case 'raw': sheet('<h2>Rohdaten</h2><div class="lead">Nur lesen.</div><div class="f"><textarea readonly style="min-height:320px;font-family:var(--font-data);font-size:12px">' +
-        esc(JSON.stringify(db, null, 2)) + '</textarea></div><button class="btn wide ghost" data-act="close-sheet">Schliessen</button>'); break;
+/* ============ Wartung ============ */
+function maintStatus(m, totalKm) {
+  let kmLeft = Infinity, dateLeft = Infinity;
+  if (m.intervalKm) kmLeft = (m.lastDoneKm||0) + m.intervalKm - totalKm;
+  if (m.intervalMonths && m.lastDoneDate) {
+    const due = new Date(m.lastDoneDate); due.setMonth(due.getMonth() + m.intervalMonths);
+    dateLeft = Math.floor((due - new Date()) / 86400000);
   }
-});
-function doImport(){
-  closeSheet();
-  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'application/json';
-  inp.onchange = () => {
-    const f = inp.files[0]; if (!f) return toast('Keine Datei gewählt.');
-    const fr = new FileReader();
-    fr.onerror = () => toast('Datei konnte nicht gelesen werden.');
-    fr.onload = () => {
-      let d;
-      try { d = JSON.parse(fr.result); } catch(e){ return toast('Datei ist kein gültiges JSON.'); }
-      if (!d || !Array.isArray(d.vehicles)) return toast('Datei enthält kein RidePilot-Backup.');
-      ask('Backup einspielen?', d.vehicles.length + ' Fahrzeug(e), ' + (d.trips || []).length + ' Fahrten. Der aktuelle Bestand wird vollständig ersetzt.', 'Einspielen', () => {
-        db = Object.assign(fresh(), d); save(); go('dashboard'); toast('Backup wiederhergestellt');
-      });
-    };
-    fr.readAsText(f);
+  const worst = Math.min(kmLeft === Infinity ? 999999 : kmLeft, dateLeft === Infinity ? 999999 : dateLeft * 3.5);
+  if (worst <= 0) return { level: 'overdue', text: 'Überfällig' };
+  if (kmLeft <= 150 || dateLeft <= 21) return { level: 'soon', text: 'Bald fällig' };
+  return { level: 'ok', text: 'OK' };
+}
+async function renderWartung() {
+ try {
+  const items = await idbGetAll('maintenance');
+  const totalKm = await getTotalKm(await idbGetAll('trips'));
+  const wrap = document.getElementById('maintList');
+  if (!items.length) {
+    wrap.innerHTML = `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 1 5.4-5.4L21 6l-3-3z"/></svg><div class="t">Noch keine Wartungspunkte</div><div class="s">Füge z. B. Bremsen, Reifen oder Service hinzu.</div></div>`;
+    return;
+  }
+  wrap.innerHTML = `<div class="card card-tight">` + items.map(m => {
+    const st = maintStatus(m, totalKm);
+    return `<div class="list-row" style="cursor:pointer;" onclick='openMaintDetail(${m.id})'>
+      <div class="main"><div class="title">${m.title}</div><div class="sub">${m.intervalKm ? m.intervalKm + ' km' : ''}${m.intervalKm && m.intervalMonths ? ' · ' : ''}${m.intervalMonths ? m.intervalMonths + ' Mte.' : ''}</div></div>
+      <span class="pill pill-${st.level==='overdue'?'danger':st.level==='soon'?'warn':'ok'}">${st.text}</span>
+    </div>`;
+  }).join('') + `</div>`;
+ } catch (err) { console.error('renderWartung:', err); showStorageError('maintList'); }
+}
+function openMaintForm(existing) {
+  const e = existing || {};
+  openModal(`
+    <h2>${existing ? 'Wartungspunkt bearbeiten' : 'Neuer Wartungspunkt'}</h2>
+    <label for="wTitle">Bezeichnung</label>
+    <input type="text" id="wTitle" value="${e.title||''}" placeholder="z. B. Bremsen prüfen">
+    <label for="wKm">Intervall (km, optional)</label>
+    <input type="number" id="wKm" value="${e.intervalKm||''}" placeholder="z. B. 1000">
+    <label for="wMonths">Intervall (Monate, optional)</label>
+    <input type="number" id="wMonths" value="${e.intervalMonths||''}" placeholder="z. B. 6">
+    <label for="wLastDate">Zuletzt erledigt am</label>
+    <input type="date" id="wLastDate" value="${e.lastDoneDate ? e.lastDoneDate.slice(0,10) : new Date().toISOString().slice(0,10)}">
+    <button class="btn btn-primary" style="margin-top:18px;" onclick="saveMaint(${e.id||'null'})">Speichern</button>
+    ${existing ? `<button class="btn btn-danger" style="margin-top:10px;" onclick="deleteMaint(${e.id})">Löschen</button>` : ''}
+  `);
+}
+async function openMaintDetail(id) {
+  const m = await idbGet('maintenance', id);
+  openMaintForm(m);
+}
+async function saveMaint(id) {
+  const totalKm = await getTotalKm(await idbGetAll('trips'));
+  const rec = {
+    title: document.getElementById('wTitle').value.trim() || 'Ohne Titel',
+    intervalKm: parseFloat(document.getElementById('wKm').value) || null,
+    intervalMonths: parseFloat(document.getElementById('wMonths').value) || null,
+    lastDoneDate: document.getElementById('wLastDate').value ? new Date(document.getElementById('wLastDate').value).toISOString() : null,
+    lastDoneKm: totalKm
   };
-  inp.click();
-  setTimeout(() => { if (!inp.files.length) toast('Dateiauswahl offen? In der Vorschau kann sie gesperrt sein.'); }, 4000);
+  if (id) rec.id = id;
+  await idbPut('maintenance', rec);
+  closeModal(); toast('Gespeichert'); renderWartung();
 }
-function seed(){
-  const v = { id: uid(), name:'Volta', make:'Volta', model:'VSX', year:'2025', color:'Schwarz',
-    plate:'ZH 41287', vin:'', odo:1840, insurer:'Beispiel Versicherung', insuranceUntil: addMonths(today(), 7),
-    policy:'P-2026-0041', batteryHealth:'98', servicePartner:'Roller Center', notes:'', createdAt: today() };
-  db.vehicles.push(v); db.activeId = v.id; db.settings.onboarded = true;
-  db.maint.push({ id: uid(), vehicleId: v.id, type:'service', date: addMonths(today(), -10), odo:600, intervalMonths:12, intervalKm:3000, cost:180, shop:'Roller Center', notes:'Erstinspektion' });
-  db.maint.push({ id: uid(), vehicleId: v.id, type:'bremsen', date: addMonths(today(), -3), odo:1400, intervalMonths:12, intervalKm:5000, cost:95, shop:'Roller Center', notes:'Beläge vorne' });
-  const demoTrack = [];
-  for (let i = 0; i <= 40; i++){
-    demoTrack.push({ lat: +(47.4050 + i * 0.0016 + Math.sin(i / 5) * 0.0011).toFixed(5),
-                     lng: +(8.6100 + i * 0.0021 + Math.cos(i / 4) * 0.0014).toFixed(5), t: Date.now() });
+async function deleteMaint(id) { await idbDelete('maintenance', id); closeModal(); toast('Gelöscht'); renderWartung(); }
+
+/* ============ Dokumente ============ */
+function triggerDocUpload() { document.getElementById('docFileInput').click(); }
+function handleDocUpload(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    await idbPut('documents', { title: file.name, category: 'Sonstiges', fileType: file.type, data: reader.result, uploadedAt: new Date().toISOString() });
+    toast('Dokument gespeichert'); renderDokumente();
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+async function renderDokumente() {
+ try {
+  const docs = (await idbGetAll('documents')).sort((a,b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+  const wrap = document.getElementById('docList');
+  if (!docs.length) {
+    wrap.innerHTML = `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg><div class="t">Noch keine Dokumente</div><div class="s">Fahrzeugausweis, Versicherung & Co. hier ablegen.</div></div>`;
+    return;
   }
-  [[-2,'Zuhause','Büro',12,22,demoTrack],[-5,'Büro','Zuhause',12,25,null],[-9,'Zuhause','See',31,48,null]].forEach(([d, f, t, km, min, tr]) => {
-    const dt = new Date(); dt.setDate(dt.getDate() + d);
-    const trip = { id: uid(), vehicleId: v.id, date: dt.toISOString().slice(0,10), from:f, to:t, distance:km, duration:String(min), notes:'' };
-    if (tr) trip.track = tr;
-    db.trips.push(trip);
-  });
-  db.docs.push({ id: uid(), vehicleId: v.id, title:'Versicherungspolice 2026', category:'Versicherung', date: addMonths(today(), -5), notes:'Teilkasko' });
-  save(); go('dashboard'); toast('Demodaten eingefügt');
+  wrap.innerHTML = `<div class="card card-tight">` + docs.map(d => `
+    <div class="list-row" style="cursor:pointer;" onclick='showDocDetail(${d.id})'>
+      ${d.fileType && d.fileType.startsWith('image') ? `<img class="doc-thumb" src="${d.data}">` : `<div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg></div>`}
+      <div class="main"><div class="title">${d.title}</div><div class="sub">${fmtDate(d.uploadedAt)}</div></div>
+    </div>`).join('') + `</div>`;
+ } catch (err) { console.error('renderDokumente:', err); showStorageError('docList'); }
+}
+async function showDocDetail(id) {
+  const d = await idbGet('documents', id);
+  openModal(`
+    <h2>${d.title}</h2>
+    <div class="desc">Hochgeladen am ${fmtDate(d.uploadedAt)}</div>
+    ${d.fileType && d.fileType.startsWith('image') ? `<img src="${d.data}" style="width:100%;border-radius:14px;margin-bottom:14px;">` : ''}
+    <a href="${d.data}" download="${d.title}" class="btn btn-secondary" style="margin-bottom:10px; text-decoration:none;">Herunterladen</a>
+    <button class="btn btn-danger" onclick="deleteDoc(${id})">Löschen</button>
+  `);
+}
+async function deleteDoc(id) { await idbDelete('documents', id); closeModal(); toast('Gelöscht'); renderDokumente(); }
+
+/* PDF-Export via Druckdialog */
+async function exportTripsPDF() {
+  const trips = (await idbGetAll('trips')).sort((a,b) => new Date(a.startTime) - new Date(b.startTime));
+  const rows = trips.map(t => `<tr><td>${fmtDate(t.startTime)}</td><td>${t.durationSec>0?fmtDuration(t.durationSec):'–'}</td><td>${fmtKm(t.distanceKm)} km</td><td>${t.note||''}</td></tr>`).join('');
+  document.getElementById('print-area').innerHTML = `<h2>Fahrtenbuch – RidePilot</h2><p>Exportiert am ${fmtDate(new Date())}</p><table><tr><th>Datum</th><th>Dauer</th><th>Distanz</th><th>Notiz</th></tr>${rows}</table>`;
+  window.print();
+}
+async function exportMaintPDF() {
+  const items = await idbGetAll('maintenance');
+  const rows = items.map(m => `<tr><td>${m.title}</td><td>${m.intervalKm?m.intervalKm+' km':'–'}</td><td>${m.intervalMonths?m.intervalMonths+' Mte.':'–'}</td><td>${m.lastDoneDate?fmtDate(m.lastDoneDate):'–'}</td></tr>`).join('');
+  document.getElementById('print-area').innerHTML = `<h2>Wartungsheft – RidePilot</h2><p>Exportiert am ${fmtDate(new Date())}</p><table><tr><th>Bezeichnung</th><th>Intervall km</th><th>Intervall Mte.</th><th>Zuletzt erledigt</th></tr>${rows}</table>`;
+  window.print();
 }
 
-/* ---------- 11. Start ------------------------------------ */
-/* Rückmeldung, sobald eine Datei gewählt wurde */
-document.addEventListener('change', e => {
-  const inp = e.target;
-  if (inp.id !== 'd-file' && inp.id !== 'v-photo') return;
-  const info = document.getElementById(inp.id + '-info');
-  const f = inp.files && inp.files[0];
-  if (info) info.textContent = f
-    ? 'Gewählt: ' + f.name + ' · ' + (f.size / 1024).toFixed(0) + ' KB'
-    : 'Keine Datei gewählt.';
-});
+/* ============ Einstellungen ============ */
+async function renderEinstellungen() {
+  const v = await idbGet('vehicle', 'main');
+  document.getElementById('vName').value = (v && v.name) || '';
+  document.getElementById('vPlate').value = (v && v.plate) || '';
+  applyThemeSwitchUI();
+  refreshPinRowLabel();
+}
+async function saveVehicle() {
+  await idbPut('vehicle', { id: 'main', name: document.getElementById('vName').value.trim(), plate: document.getElementById('vPlate').value.trim(), model: 'Volta VSX' });
+  toast('Gespeichert'); renderDashboard();
+}
 
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheetOpen) closeSheet(); });
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (db.settings.theme === 'system') applyTheme(); });
+function applyThemeSwitchUI() {
+  let t = 'system'; try { t = localStorage.getItem('rp-theme') || 'system'; } catch(e) {}
+  document.querySelectorAll('#themeSwitch button').forEach(b => b.classList.toggle('active', b.dataset.v === t));
+}
+function setTheme(t) {
+  try { localStorage.setItem('rp-theme', t); } catch(e) {}
+  const isDark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  applyThemeSwitchUI();
+  renderDashboard();
+}
 
-(async function init(){
-  const loaded = await store.get();
-  if (loaded) db = Object.assign(fresh(), loaded, { settings: Object.assign(fresh().settings, loaded.settings || {}) });
-  applyTheme(); render();
-  if ('serviceWorker' in navigator && location.protocol === 'https:') {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+/* ============ PIN & Managerbereich ============ */
+async function refreshPinRowLabel() {
+  try {
+    const s = await idbGet('settings', 'main');
+    document.getElementById('pinRowLabel').textContent = (s && s.pinHash) ? 'PIN ändern' : 'PIN einrichten';
+  } catch (err) { console.error('refreshPinRowLabel:', err); }
+}
+function openPinSetup() {
+  openModal(`
+    <h2>PIN festlegen</h2>
+    <div class="desc">Schützt den Managerbereich (Löschen, Zurücksetzen, Wiederherstellen).</div>
+    <label for="pinNew">Neue PIN (4–6 Ziffern)</label>
+    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="pinNew">
+    <label for="pinNew2">PIN bestätigen</label>
+    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="pinNew2">
+    <button class="btn btn-primary" style="margin-top:18px;" onclick="savePin()">Speichern</button>
+  `);
+}
+async function savePin() {
+  const a = document.getElementById('pinNew').value.trim(), b = document.getElementById('pinNew2').value.trim();
+  if (a.length < 4 || a.length > 6 || !/^\d+$/.test(a)) { toast('PIN muss 4–6 Ziffern haben'); return; }
+  if (a !== b) { toast('PINs stimmen nicht überein'); return; }
+  try {
+    const hash = await sha256(a);
+    const s = (await idbGet('settings','main')) || { id: 'main' };
+    s.pinHash = hash;
+    await idbPut('settings', s);
+    closeModal(); toast('PIN gespeichert'); refreshPinRowLabel();
+  } catch (err) {
+    console.error('savePin:', err);
+    toast('PIN-Funktion benötigt eine sichere Verbindung (https) – bitte über die echte Adresse öffnen');
   }
-})();
+}
+function requestManagerAccess() {
+  openModal(`
+    <h2>Managerbereich</h2>
+    <div class="desc">Bitte PIN eingeben.</div>
+    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="pinCheck" placeholder="••••">
+    <button class="btn btn-primary" style="margin-top:18px;" onclick="checkPinAndOpenManager()">Entsperren</button>
+  `);
+}
+async function checkPinAndOpenManager() {
+  const val = document.getElementById('pinCheck').value.trim();
+  try {
+    const s = await idbGet('settings', 'main');
+    if (!s || !s.pinHash) { toast('Noch keine PIN eingerichtet'); closeModal(); openPinSetup(); return; }
+    const hash = await sha256(val);
+    if (hash !== s.pinHash) { toast('PIN falsch'); return; }
+    openManagerArea();
+  } catch (err) {
+    console.error('checkPinAndOpenManager:', err);
+    toast('PIN-Funktion benötigt eine sichere Verbindung (https) – bitte über die echte Adresse öffnen');
+  }
+}
+function openManagerArea() {
+  openModal(`
+    <h2>Managerbereich</h2>
+    <div class="desc">Diese Aktionen wirken sich auf alle gespeicherten Daten aus.</div>
+    <button class="btn btn-secondary" style="margin-bottom:10px;" onclick="confirmClearVehicle()">Roller-Daten löschen</button>
+    <button class="btn btn-secondary" style="margin-bottom:10px;" onclick="confirmResetAll()">Datenbank zurücksetzen</button>
+    <button class="btn btn-secondary" style="margin-bottom:10px;" onclick="closeModal(); triggerRestoreUpload();">Backup wiederherstellen</button>
+    <button class="btn btn-secondary" onclick="showDevInfo()">Entwickleroptionen</button>
+  `);
+}
+function confirmClearVehicle() {
+  openModal(`<h2>Roller-Daten löschen?</h2><div class="desc">Name, Kontrollschild und Fahrzeugprofil werden entfernt. Fahrten bleiben erhalten.</div><button class="btn btn-danger" onclick="clearVehicle()">Ja, löschen</button>`);
+}
+async function clearVehicle() { await idbDelete('vehicle','main'); closeModal(); toast('Roller-Daten gelöscht'); renderDashboard(); }
+function confirmResetAll() {
+  openModal(`<h2>Wirklich alles zurücksetzen?</h2><div class="desc">Alle Fahrten, Wartungen, Dokumente, Kalibrierungen und Einstellungen werden unwiderruflich gelöscht.</div><button class="btn btn-danger" onclick="resetAll()">Ja, alles löschen</button>`);
+}
+async function resetAll() {
+  await Promise.all(['vehicle','trips','maintenance','documents','calibrations','settings'].map(idbClear));
+  try { localStorage.removeItem('rp-theme'); } catch(e){}
+  closeModal(); toast('Zurückgesetzt'); location.reload();
+}
+async function showDevInfo() {
+  const [trips, docs, maint, cals] = await Promise.all([idbGetAll('trips'), idbGetAll('documents'), idbGetAll('maintenance'), idbGetAll('calibrations')]);
+  let estimate = null;
+  try { if (navigator.storage && navigator.storage.estimate) estimate = await navigator.storage.estimate(); } catch(e){}
+  openModal(`
+    <h2>Entwickleroptionen</h2>
+    <div class="kv"><span class="k">Fahrten</span><span class="v">${trips.length}</span></div>
+    <div class="kv"><span class="k">Wartungspunkte</span><span class="v">${maint.length}</span></div>
+    <div class="kv"><span class="k">Dokumente</span><span class="v">${docs.length}</span></div>
+    <div class="kv"><span class="k">Kalibrierungen</span><span class="v">${cals.length}</span></div>
+    ${estimate ? `<div class="kv"><span class="k">Speicher belegt</span><span class="v">${(estimate.usage/1024/1024).toFixed(1)} MB</span></div>` : ''}
+    <button class="btn btn-secondary" style="margin-top:14px;" onclick="forceSWUpdate()">Service Worker aktualisieren</button>
+  `);
+}
+async function forceSWUpdate() {
+  if ('serviceWorker' in navigator) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    for (const r of regs) await r.update();
+    toast('Aktualisierung angestossen');
+  }
+}
+
+/* ============ Backup ============ */
+async function exportBackup() {
+  const data = {};
+  for (const store of ['vehicle','trips','maintenance','documents','calibrations','settings']) data[store] = await idbGetAll(store);
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `ridepilot-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  toast('Backup wird heruntergeladen');
+}
+function triggerRestoreUpload() { document.getElementById('restoreInput').click(); }
+function handleRestoreFile(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      openModal(`<h2>Backup wiederherstellen?</h2><div class="desc">Alle aktuellen Daten werden durch den Inhalt dieser Datei ersetzt.</div><button class="btn btn-danger" onclick='doRestore(${JSON.stringify(JSON.stringify(data))})'>Ja, wiederherstellen</button>`);
+    } catch (err) { toast('Ungültige Backup-Datei'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+async function doRestore(jsonStr) {
+  const data = JSON.parse(jsonStr);
+  for (const store of ['vehicle','trips','maintenance','documents','calibrations','settings']) {
+    await idbClear(store);
+    for (const item of (data[store]||[])) await idbPut(store, item);
+  }
+  closeModal(); toast('Backup wiederhergestellt'); location.reload();
+}
+
+/* ============ Quick Actions ============ */
+async function openJBL() {
+  if (navigator.bluetooth) {
+    try {
+      await navigator.bluetooth.requestDevice({ filters: [{ namePrefix: 'JBL' }], optionalServices: [] });
+      toast('JBL-Gerät ausgewählt');
+    } catch (e) { /* Nutzer hat abgebrochen */ }
+  } else {
+    toast('Web Bluetooth wird von diesem Browser nicht unterstützt – bitte manuell in den Bluetooth-Einstellungen verbinden');
+  }
+}
+function openSpotify() {
+  const fallback = 'https://open.spotify.com';
+  const t = setTimeout(() => { window.location.href = fallback; }, 900);
+  window.location.href = 'spotify://';
+  window.addEventListener('blur', () => clearTimeout(t), { once: true });
+}
+
+/* ============ Fahrten-Löschen von Dashboard-Karte (Wartung Klick) ============ */
 </script>
 </body>
 </html>
