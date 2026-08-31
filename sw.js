@@ -1,6 +1,6 @@
 // RidePilot Service Worker – ermöglicht Offline-Nutzung.
 // Versionsnummer bei jedem Update hochzählen, damit Geräte die neue Version laden.
-const CACHE_VERSION = 'ridepilot-v1';
+const CACHE_VERSION = 'ridepilot-v4';
 const APP_SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (event) => {

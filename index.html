@@ -14,6 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer></script>
 <script>
   /* Theme sofort setzen (vor dem ersten Paint), damit kein Flackern entsteht. */
   (function () {
@@ -223,10 +225,13 @@
   #ridemode.open { display: flex; }
   #ridemode .rm-label { font-size: 14px; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: .08em; }
   #ridemode .rm-timer { font-size: 56px; font-weight: 700; font-family: 'Space Grotesk'; margin: 6px 0 26px; font-variant-numeric: tabular-nums; }
-  #ridemode .rm-dist { text-align: center; margin-bottom: 40px; }
+  #ridemode .rm-dist { text-align: center; margin-bottom: 6px; }
   #ridemode .rm-dist .num { font-size: 72px; font-weight: 700; line-height: 1; }
   #ridemode .rm-dist .unit { font-size: 18px; color: var(--text-2); font-weight: 700; }
-  #ridemode .rm-gps { font-size: 12.5px; color: var(--text-3); margin-top: -30px; margin-bottom: 34px; font-weight: 600; }
+  #ridemode .rm-speed { text-align: center; margin-bottom: 10px; font-family: 'Space Grotesk'; font-variant-numeric: tabular-nums; }
+  #ridemode .rm-speed .num { font-size: 30px; font-weight: 700; color: var(--text-2); }
+  #ridemode .rm-speed .unit { font-size: 14px; color: var(--text-3); font-weight: 700; }
+  #ridemode .rm-gps { font-size: 12.5px; color: var(--text-3); margin-bottom: 34px; font-weight: 600; }
   #ridemode .rm-actions { width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 12px; }
   #ridemode .rm-stop { background: var(--danger); color: white; border: none; border-radius: 100px; padding: 20px; font-size: 18px; font-weight: 800; width: 100%; }
   #ridemode .rm-photo { background: var(--surface-alt); border: 1px solid var(--border); border-radius: 100px; padding: 15px; font-weight: 700; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; }
@@ -253,6 +258,11 @@
   #print-area { display: none; }
   #print-area table { width: 100%; border-collapse: collapse; font-size: 13px; }
   #print-area th, #print-area td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #ccc; }
+
+  #map { height: 340px; width: 100%; background: var(--surface-alt); }
+  .leaflet-container { font-family: 'Manrope', sans-serif; background: var(--surface-alt); }
+  .leaflet-control-attribution { font-size: 9px; }
+  .rp-dot { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); border: 3px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.2); }
 
   .link-row { display:flex; align-items:center; justify-content:space-between; padding: 14px 2px; border-bottom: 1px solid var(--border); }
   .link-row:last-child { border-bottom:none; }
@@ -303,14 +313,31 @@
       </details>
     </div>
 
+    <button class="btn btn-primary" style="margin-bottom:12px;" onclick="startRide()">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Fahrt starten
+    </button>
+
     <div class="quick-grid">
-      <button class="quick-btn" onclick="startRide()">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        Fahrt starten
+      <button class="quick-btn" onclick="openMessages()">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.2-.6L3 21l1.8-5a8.3 8.3 0 0 1-.8-3.5C4 7.3 7.8 3.5 12.5 3.5S21 7.3 21 11.5z"/></svg>
+        Nachrichten
       </button>
-      <button class="quick-btn" onclick="openJBL()">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5 17.5 17.5 12 23V1l5.5 5.5L6.5 17.5"/></svg>
-        JBL Portable
+      <button class="quick-btn" onclick="openWhatsApp()">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.6a8.4 8.4 0 0 1-12.3 7.5L3.5 20.5l1.5-4.6a8.4 8.4 0 1 1 15.5-4.3z"/><path d="M9 9.3c.3-.7.6-.8 1-.8h.6c.2 0 .5 0 .7.6l.8 1.9c.1.3 0 .5-.1.7l-.4.5c-.1.2-.2.3 0 .6a6 6 0 0 0 2.6 2.2c.3.1.5.1.7-.1l.5-.6c.2-.2.4-.2.6-.1l1.8.9c.3.1.5.3.5.5a2 2 0 0 1-1.9 2 7.7 7.7 0 0 1-6.2-3.4c-.9-1.4-1.5-2.7-1.2-3.9z"/></svg>
+        WhatsApp
+      </button>
+      <button class="quick-btn" onclick="openAppleMaps()">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="9 20 3 17 3 4 9 7 15 4 21 7 21 20 15 17 9 20"/><line x1="9" y1="7" x2="9" y2="20"/><line x1="15" y1="4" x2="15" y2="17"/></svg>
+        Karten
+      </button>
+      <button class="quick-btn" onclick="connectBox('boombox')">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="11" rx="3"/><circle cx="8" cy="12.5" r="2.6"/><circle cx="16" cy="12.5" r="2.6"/></svg>
+        Boombox 3
+      </button>
+      <button class="quick-btn" onclick="connectBox('flip')">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="18" height="7" rx="3.5"/><circle cx="12" cy="12.5" r="2.2"/></svg>
+        Flip 5
       </button>
       <button class="quick-btn" onclick="openSpotify()">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M7.5 9.5c3-1 6.5-.6 9 1M8 13c2.3-.7 5-.4 7.2.8M8.5 16.2c1.8-.5 3.8-.3 5.3.6"/></svg>
@@ -339,6 +366,24 @@
       <button class="btn btn-secondary" style="flex:0 0 auto; width:auto; padding:14px 16px;" onclick="openManualTrip()">+ manuell</button>
     </div>
     <div id="tripList"></div>
+  </section>
+
+  <!-- KARTE -->
+  <section class="view" id="view-karte">
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div id="map"></div>
+      <div id="mapFallback" class="empty" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z"/></svg>
+        <div class="t">Karte nicht geladen</div>
+        <div class="s">Die Karte braucht eine Internetverbindung. Offline stehen dir alle anderen Funktionen weiter zur Verfügung.</div>
+      </div>
+      <div style="padding:12px 14px; display:flex; gap:10px;">
+        <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="locateMe()">Meine Position</button>
+        <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="showLastTrack()">Letzte Fahrt</button>
+      </div>
+    </div>
+    <div class="field-note" style="margin:0 4px 14px;" id="mapHint">Zeigt deinen Standort und die Strecke der laufenden oder letzten Fahrt.</div>
+    <button class="btn btn-primary" onclick="openAppleMaps()">In Apple Karten öffnen (Navigation)</button>
   </section>
 
   <!-- WARTUNG -->
@@ -377,6 +422,24 @@
         <button data-v="light" onclick="setTheme('light')">Hell</button>
         <button data-v="dark" onclick="setTheme('dark')">Dunkel</button>
       </div>
+    </div>
+
+    <div class="section-title">Ablage</div>
+    <div class="card card-tight">
+      <div class="link-row" onclick="setView('dokumente')" style="cursor:pointer;">
+        <span class="l"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Dokumente & PDF-Export</span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>
+
+    <div class="section-title">Lautsprecher</div>
+    <div class="card">
+      <div style="font-size:14px; color:var(--text-2); line-height:1.5;">
+        Auf dem iPhone darf eine Web-App keine Bluetooth-Geräte selbst verbinden. Die Boxen-Buttons starten deshalb je einen Kurzbefehl. Lege in der Kurzbefehle-App zwei Kurzbefehle mit genau diesen Namen an:
+      </div>
+      <div class="kv" style="margin-top:10px;"><span class="k">Boombox 3</span><span class="v">JBL Boombox</span></div>
+      <div class="kv"><span class="k">Flip 5</span><span class="v">JBL Flip</span></div>
+      <div class="field-note">Inhalt je Kurzbefehl: Aktion „Wiedergabeziel festlegen" → passende Box auswählen.</div>
     </div>
 
     <div class="section-title">Roller-Profil</div>
@@ -431,13 +494,13 @@
       <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20 3 17V4l6 3 6-3 6 3v13l-6-3-6 3z"/><line x1="9" y1="7" x2="9" y2="20"/><line x1="15" y1="4" x2="15" y2="17"/></svg>
       Fahrten
     </button>
+    <button class="tab" data-view="karte" onclick="setView('karte')">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z"/></svg>
+      Karte
+    </button>
     <button class="tab" data-view="wartung" onclick="setView('wartung')">
       <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 1 5.4-5.4L21 6l-3-3z"/></svg>
       Wartung
-    </button>
-    <button class="tab" data-view="dokumente" onclick="setView('dokumente')">
-      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      Dokumente
     </button>
     <button class="tab" data-view="einstellungen" onclick="setView('einstellungen')">
       <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
@@ -452,6 +515,7 @@
   <div class="rm-label">Fahrt läuft</div>
   <div class="rm-timer" id="rmTimer">00:00</div>
   <div class="rm-dist"><span class="num" id="rmDist">0.0</span> <span class="unit">km</span></div>
+  <div class="rm-speed"><span class="num" id="rmSpeed">0</span> <span class="unit">km/h</span></div>
   <div class="rm-gps" id="rmGpsStatus">GPS wird gesucht …</div>
   <div class="rm-actions">
     <button class="rm-photo" onclick="triggerRidePhoto()">
@@ -590,9 +654,11 @@ function setView(name) {
   currentView = name;
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === name));
+  const tabName = (name === 'dokumente') ? 'einstellungen' : name;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === tabName));
   window.scrollTo(0,0);
   if (name === 'dashboard') renderDashboard();
+  if (name === 'karte') initMap();
   if (name === 'fahrten') renderFahrten();
   if (name === 'wartung') renderWartung();
   if (name === 'dokumente') renderDokumente();
@@ -702,13 +768,27 @@ async function submitCalibration() {
 }
 
 /* ============ Fahrten / Ride-Tracking ============ */
-let rideActive = false, rideStart = null, rideDistance = 0, rideLastPos = null, watchId = null, rideTimerInt = null, ridePhotos = [];
+let rideActive = false, rideStart = null, rideDistance = 0, rideLastPos = null, rideLastTime = null, watchId = null, rideTimerInt = null, ridePhotos = [], rideSpeedKmh = 0, rideTrack = [];
+
+/* Filter gegen GPS-Rauschen. Wichtigster Punkt: das Gerät meldet neben der Position auch
+   ein gemessenes Tempo (coords.speed). Das ist im Stand deutlich zuverlässiger als der
+   Vergleich zweier Positionen, weil GPS-Punkte auch beim Stehen um Meter wandern.
+   - Fixes mit schlechter Genauigkeit werden komplett verworfen
+   - meldet das Gerät Schritttempo oder weniger, zählt gar nichts
+   - zusätzlich muss die Bewegung grösser sein als die Messungenauigkeit
+   - unrealistische Sprünge (Tunnel, Neuortung) setzen den Bezugspunkt neu, ohne zu zählen */
+const GPS_MAX_ACCURACY_M = 30;   // schlechtere Fixes ignorieren
+const GPS_MAX_SPEED_MS = 12;     // ~43 km/h – mehr schafft der Roller nicht, darüber ist es ein Ortungssprung
+const GPS_MIN_SPEED_MS = 1.2;    // ~4 km/h – darunter gilt: steht
+const GPS_MIN_MOVE_KM = 0.008;   // Grundschwelle: 8 m
 
 function startRide() {
   if (rideActive) return;
-  rideActive = true; rideStart = Date.now(); rideDistance = 0; rideLastPos = null; ridePhotos = [];
+  rideActive = true; rideStart = Date.now(); rideDistance = 0;
+  rideLastPos = null; rideLastTime = null; ridePhotos = []; rideSpeedKmh = 0; rideTrack = [];
   document.getElementById('rmTimer').textContent = '00:00';
   document.getElementById('rmDist').textContent = '0.0';
+  document.getElementById('rmSpeed').textContent = '0';
   document.getElementById('rmShots').textContent = '';
   document.getElementById('rmGpsStatus').textContent = 'GPS wird gesucht …';
   document.getElementById('ridemode').classList.add('open');
@@ -717,20 +797,72 @@ function startRide() {
     const s = Math.floor((Date.now() - rideStart) / 1000);
     const mm = String(Math.floor(s/60)).padStart(2,'0'), ss = String(s%60).padStart(2,'0');
     document.getElementById('rmTimer').textContent = `${mm}:${ss}`;
+    // Ohne frische Position nach 8 s gilt: steht still
+    if (rideLastTime && Date.now() - rideLastTime > 8000 && rideSpeedKmh !== 0) {
+      rideSpeedKmh = 0;
+      document.getElementById('rmSpeed').textContent = '0';
+    }
   }, 1000);
 
   if ('geolocation' in navigator) {
     watchId = navigator.geolocation.watchPosition(pos => {
-      document.getElementById('rmGpsStatus').textContent = `GPS aktiv · Genauigkeit ±${Math.round(pos.coords.accuracy)} m`;
+      const acc = pos.coords.accuracy;
+      const now = pos.timestamp || Date.now();
+      const statusEl = document.getElementById('rmGpsStatus');
+
+      if (acc > GPS_MAX_ACCURACY_M) {
+        statusEl.textContent = `GPS ungenau (±${Math.round(acc)} m) – wird nicht gezählt`;
+        return;
+      }
+      statusEl.textContent = `GPS aktiv · ±${Math.round(acc)} m`;
+
       const { latitude, longitude } = pos.coords;
+      // Vom Gerät gemessenes Tempo, falls vorhanden (auf dem iPhone der Normalfall)
+      const reported = (typeof pos.coords.speed === 'number' && !isNaN(pos.coords.speed) && pos.coords.speed >= 0)
+        ? pos.coords.speed : null;
+
       if (rideLastPos) {
-        const d = haversine(rideLastPos.lat, rideLastPos.lng, latitude, longitude);
-        if (d > 0.003 && d < 0.5) { rideDistance += d; document.getElementById('rmDist').textContent = fmtKm(rideDistance); }
+        const dKm = haversine(rideLastPos.lat, rideLastPos.lng, latitude, longitude);
+        const dtSec = (now - rideLastTime) / 1000;
+        const calcMs = dtSec > 0 ? (dKm * 1000) / dtSec : Infinity;
+        const speedMs = reported !== null ? reported : calcMs;
+        // Schwelle wächst mit der Ungenauigkeit: kleine Drift zählt nicht als Fahrt
+        // Ohne Tempowert vom Gerät ist die Messung anfälliger – dann strenger filtern
+        const minMove = reported !== null
+          ? Math.max(GPS_MIN_MOVE_KM, acc / 1000)
+          : Math.max(GPS_MIN_MOVE_KM * 2, (acc / 1000) * 1.8);
+
+        if (calcMs > GPS_MAX_SPEED_MS) {
+          // Ortungssprung: nur neu ansetzen
+          rideLastPos = { lat: latitude, lng: longitude }; rideLastTime = now;
+          return;
+        }
+        if (speedMs < GPS_MIN_SPEED_MS) {
+          // steht (Ampel, Parkplatz): Position nachführen, aber nichts dazuzählen
+          rideSpeedKmh = 0;
+          document.getElementById('rmSpeed').textContent = '0';
+          rideLastPos = { lat: latitude, lng: longitude }; rideLastTime = now;
+          return;
+        }
+        if (dKm < minMove) {
+          // zu klein für echte Bewegung – Bezugspunkt behalten, damit langsames Fahren
+          // über mehrere Messungen trotzdem aufaddiert wird
+          return;
+        }
+        rideDistance += dKm;
+        rideSpeedKmh = Math.round(speedMs * 3.6);
+        document.getElementById('rmDist').textContent = fmtKm(rideDistance);
+        document.getElementById('rmSpeed').textContent = String(rideSpeedKmh);
+        rideTrack.push([latitude, longitude]);
+        updateLiveTrack();
+      } else {
+        rideTrack.push([latitude, longitude]);
       }
       rideLastPos = { lat: latitude, lng: longitude };
+      rideLastTime = now;
     }, err => {
       document.getElementById('rmGpsStatus').textContent = 'GPS nicht verfügbar – Distanz manuell erfassen';
-    }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 12000 });
+    }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
   } else {
     document.getElementById('rmGpsStatus').textContent = 'GPS auf diesem Gerät nicht verfügbar';
   }
@@ -759,7 +891,8 @@ async function stopRide() {
     startTime: new Date(rideStart).toISOString(),
     endTime: new Date().toISOString(),
     durationSec, distanceKm: Math.round(distance*100)/100,
-    photos: ridePhotos, note: '', type: ridePhotos.length ? 'incident' : 'normal', manual: false
+    photos: ridePhotos, note: '', type: ridePhotos.length ? 'incident' : 'normal', manual: false,
+    track: rideTrack.map(p => [Math.round(p[0]*1e5)/1e5, Math.round(p[1]*1e5)/1e5])
   });
   toast(`Fahrt gespeichert · ${fmtKm(distance)} km`);
   if (currentView === 'fahrten') renderFahrten();
@@ -819,6 +952,94 @@ async function showTripDetail(id) {
   `);
 }
 async function deleteTrip(id) { await idbDelete('trips', id); closeModal(); toast('Fahrt gelöscht'); renderFahrten(); if (document.getElementById('view-dashboard').classList.contains('active')) renderDashboard(); }
+
+/* ============ Karte ============ */
+/* Grundlage ist OpenStreetMap. Apples eigene Karten lassen sich in einer Web-App nicht
+   einbetten – dafür verlangt Apple ein kostenpflichtiges Entwicklerkonto mit Schlüssel.
+   Für echte Navigation führt der Knopf unten deshalb in die Karten-App. */
+let mapObj = null, mapMarker = null, mapTrackLine = null, mapWatchId = null;
+
+function tileLayerFor(theme) {
+  const dark = theme === 'dark';
+  const url = dark
+    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+  return L.tileLayer(url, {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap, &copy; CARTO'
+  });
+}
+
+function initMap() {
+  if (mapObj) { setTimeout(() => mapObj.invalidateSize(), 60); return; }
+  if (typeof L === 'undefined') {
+    document.getElementById('map').style.display = 'none';
+    document.getElementById('mapFallback').style.display = 'block';
+    return;
+  }
+  try {
+    mapObj = L.map('map', { zoomControl: true, attributionControl: true }).setView([47.4, 8.6], 13);
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    tileLayerFor(isDark ? 'dark' : 'light').addTo(mapObj);
+    setTimeout(() => mapObj.invalidateSize(), 80);
+    locateMe();
+    if (rideActive && rideTrack.length) updateLiveTrack();
+    else showLastTrack(true);
+  } catch (err) {
+    console.error('initMap:', err);
+    document.getElementById('map').style.display = 'none';
+    document.getElementById('mapFallback').style.display = 'block';
+  }
+}
+
+function locateMe() {
+  if (!mapObj || !navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(pos => {
+    const ll = [pos.coords.latitude, pos.coords.longitude];
+    if (!mapMarker) {
+      mapMarker = L.marker(ll, {
+        icon: L.divIcon({ className: '', html: '<div class="rp-dot"></div>', iconSize: [18,18], iconAnchor: [9,9] })
+      }).addTo(mapObj);
+    } else mapMarker.setLatLng(ll);
+    if (!mapTrackLine) mapObj.setView(ll, 16);
+  }, () => {
+    document.getElementById('mapHint').textContent = 'Standort nicht freigegeben – die Karte zeigt nur die Strecke.';
+  }, { enableHighAccuracy: true, timeout: 10000 });
+}
+
+function drawTrack(points, fit) {
+  if (!mapObj || !points || points.length < 2) return false;
+  if (mapTrackLine) { mapObj.removeLayer(mapTrackLine); mapTrackLine = null; }
+  mapTrackLine = L.polyline(points, { color: '#0E7C86', weight: 5, opacity: .9, lineJoin: 'round' }).addTo(mapObj);
+  if (fit) mapObj.fitBounds(mapTrackLine.getBounds(), { padding: [30,30] });
+  return true;
+}
+
+function updateLiveTrack() {
+  if (!mapObj || !rideTrack.length) return;
+  drawTrack(rideTrack, false);
+}
+
+async function showLastTrack(silent) {
+  if (!mapObj) return;
+  try {
+    if (rideActive && rideTrack.length > 1) {
+      drawTrack(rideTrack, true);
+      document.getElementById('mapHint').textContent = 'Strecke der laufenden Fahrt.';
+      return;
+    }
+    const trips = (await idbGetAll('trips'))
+      .filter(t => Array.isArray(t.track) && t.track.length > 1)
+      .sort((a,b) => new Date(b.startTime) - new Date(a.startTime));
+    if (!trips.length) {
+      if (!silent) toast('Noch keine aufgezeichnete Strecke');
+      document.getElementById('mapHint').textContent = 'Sobald du eine Fahrt aufzeichnest, erscheint die Strecke hier.';
+      return;
+    }
+    drawTrack(trips[0].track, true);
+    document.getElementById('mapHint').textContent = `Strecke vom ${fmtDate(trips[0].startTime)} · ${fmtKm(trips[0].distanceKm)} km`;
+  } catch (err) { console.error('showLastTrack:', err); }
+}
 
 /* ============ Wartung ============ */
 function maintStatus(m, totalKm) {
@@ -1096,22 +1317,52 @@ async function doRestore(jsonStr) {
 }
 
 /* ============ Quick Actions ============ */
-async function openJBL() {
+/* Auf iPhone/Mac kann eine Website Bluetooth-Geräte nicht selbst verbinden (Apple erlaubt
+   kein Web Bluetooth). Deshalb startet der Button dort einen Kurzbefehl gleichen Namens,
+   den Ivan in der Kurzbefehle-App anlegt. Auf Android/Chrome läuft der direkte Weg. */
+const BOXES = {
+  boombox: { label: 'Boombox 3', shortcut: 'JBL Boombox', btName: 'Boombox' },
+  flip:    { label: 'Flip 5',    shortcut: 'JBL Flip',    btName: 'Flip' }
+};
+
+async function connectBox(key) {
+  const box = BOXES[key];
+  if (!box) return;
+  const isApple = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent);
+
+  if (isApple) {
+    window.location.href = 'shortcuts://run-shortcut?name=' + encodeURIComponent(box.shortcut);
+    setTimeout(() => {
+      toast(`Kurzbefehl „${box.shortcut}" nötig – siehe Einstellungen`);
+    }, 1500);
+    return;
+  }
+
   if (navigator.bluetooth) {
     try {
-      await navigator.bluetooth.requestDevice({ filters: [{ namePrefix: 'JBL' }], optionalServices: [] });
-      toast('JBL-Gerät ausgewählt');
-    } catch (e) { /* Nutzer hat abgebrochen */ }
+      await navigator.bluetooth.requestDevice({ filters: [{ namePrefix: box.btName }], optionalServices: [] });
+      toast(`${box.label} ausgewählt`);
+    } catch (e) { /* Auswahl abgebrochen */ }
   } else {
-    toast('Web Bluetooth wird von diesem Browser nicht unterstützt – bitte manuell in den Bluetooth-Einstellungen verbinden');
+    toast(`${box.label} bitte in den Bluetooth-Einstellungen verbinden`);
   }
 }
-function openSpotify() {
-  const fallback = 'https://open.spotify.com';
-  const t = setTimeout(() => { window.location.href = fallback; }, 900);
-  window.location.href = 'spotify://';
-  window.addEventListener('blur', () => clearTimeout(t), { once: true });
+
+/* Öffnet eine App per URL-Schema. Reagiert das Gerät nicht (App fehlt),
+   wird nach kurzer Wartezeit die Web-Variante geladen. */
+function openExternal(scheme, fallback) {
+  let done = false;
+  const cancel = () => { done = true; };
+  window.addEventListener('blur', cancel, { once: true });
+  window.addEventListener('pagehide', cancel, { once: true });
+  setTimeout(() => { if (!done && fallback) window.location.href = fallback; }, 1200);
+  window.location.href = scheme;
 }
+
+function openSpotify() { openExternal('spotify://', 'https://open.spotify.com'); }
+function openAppleMaps() { openExternal('maps://', 'https://maps.apple.com/'); }
+function openMessages() { openExternal('sms:', null); }
+function openWhatsApp() { openExternal('whatsapp://app', 'https://web.whatsapp.com'); }
 
 /* ============ Fahrten-Löschen von Dashboard-Karte (Wartung Klick) ============ */
 </script>
