@@ -262,6 +262,42 @@
   #map { height: 340px; width: 100%; background: var(--surface-alt); }
   .leaflet-container { font-family: 'Manrope', sans-serif; background: var(--surface-alt); }
 
+  /* ============ Steuerzentrale (Fahrtmodus) ============ */
+  #ridemode.open { background: #0A0E13; color: #F2F5F9; justify-content: flex-start;
+                   padding: calc(14px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom)); }
+  #ridemode .rm-label { order: -1; color: #6F7C8C; font-size: 11.5px; margin-top: 6px; }
+  #ridemode .rm-nav { order: -2; width: 100%; max-width: 420px; background: #131923; border: 1px solid #1F2836;
+                      border-radius: 22px; padding: 16px 18px; margin: 0 0 10px; box-shadow: none; }
+  #ridemode .rm-nav .instr { font-size: 19px; font-weight: 800; letter-spacing: -.3px; color: #F2F5F9; line-height: 1.25; }
+  #ridemode .rm-nav .instr span:first-child { font-size: 30px; line-height: 1; color: #4EA1FF; }
+  #ridemode .rm-nav .dest { color: #6F7C8C; margin-top: 12px; }
+  #ridemode .rm-nav .destname { color: #F2F5F9; }
+  #ridemode .rm-nav .vals { border-top: 1px solid #1F2836; margin-top: 12px; padding-top: 12px; }
+  #ridemode .rm-nav .vals .v { color: #F2F5F9; font-size: 19px; }
+  #ridemode .rm-nav .vals .l { color: #6F7C8C; }
+  #ridemode .rm-speed { order: 1; margin: 4px 0 0; }
+  #ridemode .rm-speed .num { font-size: 96px; font-weight: 800; color: #F2F5F9; line-height: 1; letter-spacing: -3px; }
+  #ridemode .rm-speed .unit { font-size: 15px; color: #6F7C8C; }
+  #ridemode .rm-dist { order: 2; margin: 10px 0 0; }
+  #ridemode .rm-dist .num { font-size: 34px; color: #A8B4C4; }
+  #ridemode .rm-dist .unit { color: #6F7C8C; font-size: 14px; }
+  #ridemode .rm-timer { order: 3; font-size: 20px; color: #6F7C8C; margin: 6px 0 0; }
+  #ridemode .rm-gps { order: 4; color: #6F7C8C; margin: 10px 0 16px; }
+  #ridemode .rm-actions { order: 5; max-width: 420px; margin-top: auto; }
+  #ridemode .rm-photo { background: #131923; border-color: #1F2836; color: #F2F5F9; }
+  #ridemode .rm-photo svg { stroke: #F2F5F9; }
+  #ridemode .rm-min { background: #131923; border-color: #1F2836; color: #F2F5F9; }
+  #ridemode .rm-stop { background: #D0483C; }
+
+  /* Hinweisband in der Karten-Ansicht */
+  #navMapPanel { background: #131923; border-color: #1F2836; color: #F2F5F9; }
+  #navMapPanel .field-note { color: #6F7C8C; }
+  #navMapPanel #mapNavArrow { font-size: 28px; color: #4EA1FF; }
+  #navMapPanel #mapNavInstr { font-size: 17px; }
+  #navMapPanel .num { color: #F2F5F9; }
+  #navMapPanel .btn { background: #1B222E; border-color: #28323F; color: #F2F5F9; }
+
+
   /* ============ Navigation «Wohin?» ============ */
   .nav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .nav-tile { background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius-md);
@@ -306,6 +342,8 @@
   .link-row .l svg { width:18px; height:18px; stroke: var(--text-2); }
   .link-row svg.chev { width:16px; height:16px; stroke: var(--text-3); }
 </style>
+<link rel="stylesheet" href="./techno.css">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 </head>
 <body>
 <div id="app">
@@ -413,6 +451,29 @@
 
   <!-- KARTE -->
   <section class="view" id="view-karte">
+    <div class="card card-tight" id="navMapPanel" style="display:none;margin-bottom:12px;">
+      <div style="display:flex;gap:8px;align-items:center;font-weight:800;font-size:15.5px;">
+        <span id="mapNavArrow">➜</span><span id="mapNavInstr">Route wird berechnet …</span>
+      </div>
+      <div style="display:flex;text-align:center;margin-top:12px;">
+        <div style="flex:1;"><div class="num" id="mapNavToGo" style="font-size:20px;font-weight:800;">–</div><div class="field-note">bis Ziel</div></div>
+        <div style="flex:1;"><div class="num" id="mapNavEta" style="font-size:20px;font-weight:800;">–</div><div class="field-note">Ankunft</div></div>
+        <div style="flex:1;"><div class="num" id="mapNavDriven" style="font-size:20px;font-weight:800;">–</div><div class="field-note">gefahren</div></div>
+        <div style="flex:1;"><div class="num" id="mapNavLeft" style="font-size:20px;font-weight:800;">–</div><div class="field-note">Restreichweite</div></div>
+      </div>
+      <div class="field-note" id="mapNavWarn" style="display:none;color:var(--danger);font-weight:700;margin-top:6px;">⚠︎ Restreichweite reicht nicht bis zum Ziel.</div>
+      <div style="display:flex;gap:10px;margin-top:12px;">
+        <button class="btn btn-secondary btn-sm" style="flex:1;" id="navFollowBtn" onclick="navToggleFollow()">Folgen: an</button>
+        <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="navMaximize()">Vollbild</button>
+        <button class="btn btn-secondary btn-sm" style="flex:1;color:var(--danger);" onclick="stopRide()">Beenden</button>
+      </div>
+    </div>
+
+    <div class="card card-tight" id="navMapPicker" style="margin-bottom:12px;">
+      <div class="section-title" style="margin:0 0 10px;">Wohin?</div>
+      <div class="nav-grid" id="navTilesMap"></div>
+    </div>
+
     <div class="card" style="padding:0; overflow:hidden;">
       <div id="map"></div>
       <div id="mapFallback" class="empty" style="display:none;">
@@ -562,7 +623,8 @@
     <div class="destname" id="rmNavDest">–</div>
     <div class="vals">
       <div><div class="v" id="rmNavToGo">–</div><div class="l">bis Ziel</div></div>
-      <div><div class="v" id="rmNavLeft">–</div><div class="l">Restreichweite</div></div>
+      <div><div class="v" id="rmNavEta">–</div><div class="l">Ankunft</div></div>
+      <div><div class="v" id="rmNavLeft">–</div><div class="l">Reichweite</div></div>
     </div>
     <div class="warn" id="rmNavWarn" style="display:none;">⚠︎ Restreichweite reicht nicht bis zum Ziel.</div>
   </div>
@@ -1446,6 +1508,7 @@ function openWhatsApp() { openExternal('whatsapp://app', 'https://web.whatsapp.c
   let toGoKm = null;          // verbleibende Strecke laut Route
   let routePts = [];          // Routenpunkte für Umweg-Erkennung
   let lastRouteAt = 0;
+  let etaSec = null;
   let tickInt = null;
   let routeLine = null, destMarker = null;
   let edit = null;            // Zustand im Ziel-Editor
@@ -1466,9 +1529,15 @@ function openWhatsApp() { openExternal('whatsapp://app', 'https://web.whatsapp.c
 
   /* ---------------- Kacheln ---------------- */
   function renderTiles() {
-    const box = document.getElementById('navTiles');
-    if (!box) return;
-    box.innerHTML = dests.map(d => `
+    const html = tilesHtml();
+    ['navTiles', 'navTilesMap'].forEach(id => {
+      const b = document.getElementById(id);
+      if (b) b.innerHTML = html;
+    });
+  }
+
+  function tilesHtml() {
+    return dests.map(d => `
       <div class="nav-tile" onclick="navGo('${d.id}')" oncontextmenu="navEditor('${d.id}');return false;">
         <div class="ic">${d.icon}</div>
         <div class="nm">${escapeHtml(d.name)}</div>
@@ -1500,6 +1569,9 @@ function openWhatsApp() { openExternal('whatsapp://app', 'https://web.whatsapp.c
       <input type="text" id="navQuery" placeholder="oder Adresse suchen" autocomplete="off">
       <button class="btn" style="margin:10px 0;" onclick="navSearch()">Suchen</button>
       <div id="navResults"></div>
+      <label>oder Koordinaten (Breite, Länge)</label>
+      <input type="text" id="navCoords" inputmode="decimal" placeholder="z. B. 47.4021, 8.6182"
+             value="${edit.lat ? edit.lat.toFixed(5) + ', ' + edit.lon.toFixed(5) : ''}">
       <div id="navPicked" class="field-note" style="margin:10px 2px;">${edit.lat ? '✓ Position gespeichert' : 'Noch keine Position.'}</div>
       <button class="btn btn-primary" style="margin-top:14px;" onclick="navSave()">Sichern</button>
       ${d ? `<button class="btn" style="margin-top:10px;color:var(--danger);" onclick="navDelete('${d.id}')">Ziel löschen</button>` : ''}
@@ -1516,53 +1588,117 @@ function openWhatsApp() { openExternal('whatsapp://app', 'https://web.whatsapp.c
 
   window.navUseHere = function () {
     const note = document.getElementById('navPicked');
-    if (note) note.textContent = 'Standort wird ermittelt …';
-    navigator.geolocation.getCurrentPosition(p => {
+    const say = t => { if (note) note.textContent = t; };
+
+    if (!navigator.geolocation) { say('Dieses Gerät liefert keine Ortung.'); return; }
+    say('Standort wird ermittelt …');
+
+    let done = false;
+    const ok = p => {
+      if (done) return; done = true;
       edit.lat = p.coords.latitude; edit.lon = p.coords.longitude; edit.label = 'aktueller Standort';
-      if (note) note.textContent = '✓ Aktueller Standort übernommen';
-    }, () => {
-      if (note) note.textContent = 'Standort nicht verfügbar – Ortung für Safari erlauben.';
-    }, { enableHighAccuracy: true, timeout: 10000 });
+      const f = document.getElementById('navCoords');
+      if (f) f.value = edit.lat.toFixed(5) + ', ' + edit.lon.toFixed(5);
+      say('✓ Standort übernommen (±' + Math.round(p.coords.accuracy) + ' m)');
+    };
+    const fail = err => {
+      if (done) return; done = true;
+      const code = err && err.code;
+      if (code === 1) say('Ortung ist gesperrt. Einstellungen → Datenschutz → Ortungsdienste → Safari-Websites → «Beim Verwenden», danach Seite neu laden.');
+      else if (code === 2) say('Kein Standortsignal. Kurz ins Freie gehen oder Koordinaten unten eintragen.');
+      else if (code === 3) say('Zeitüberschreitung – bitte nochmals antippen.');
+      else say('Standort nicht verfügbar' + (err && err.message ? ': ' + err.message : '') + '.');
+    };
+
+    navigator.geolocation.getCurrentPosition(ok, () => {
+      // zweiter Versuch mit gröberer Ortung – klappt in Gebäuden häufiger
+      navigator.geolocation.getCurrentPosition(ok, fail,
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
+    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
   };
 
   window.navSearch = async function () {
-    const q = (document.getElementById('navQuery') || {}).value || '';
+    const q = ((document.getElementById('navQuery') || {}).value || '').trim();
     const box = document.getElementById('navResults');
-    if (!q.trim() || !box) return;
+    if (!box) return;
+    if (!q) { box.innerHTML = '<div class="nav-res">Bitte etwas eingeben.</div>'; return; }
     box.innerHTML = '<div class="nav-res">Suche …</div>';
+
+    let list = [];
     try {
-      const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=ch&q=' + encodeURIComponent(q));
-      const list = await r.json();
-      if (!list.length) { box.innerHTML = '<div class="nav-res">Nichts gefunden.</div>'; return; }
-      box.innerHTML = list.map((it, i) =>
-        `<div class="nav-res" onclick="navPickResult(${i})"><b>${escapeHtml(it.display_name.split(',')[0])}</b><small>${escapeHtml(it.display_name)}</small></div>`
-      ).join('');
-      window.__navResults = list;
-    } catch (e) {
-      box.innerHTML = '<div class="nav-res">Suche nicht erreichbar.</div>';
+      const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&addressdetails=0&q=' + encodeURIComponent(q));
+      if (r.ok) {
+        list = (await r.json()).map(it => ({
+          lat: parseFloat(it.lat), lon: parseFloat(it.lon),
+          title: it.display_name.split(',')[0], sub: it.display_name
+        }));
+      }
+    } catch (e) { /* Ersatzdienst unten */ }
+
+    if (!list.length) {
+      try {
+        const r2 = await fetch('https://photon.komoot.io/api/?limit=5&lang=de&q=' + encodeURIComponent(q));
+        if (r2.ok) {
+          const j = await r2.json();
+          list = (j.features || []).map(f => {
+            const p = f.properties || {};
+            return {
+              lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0],
+              title: p.name || p.street || 'Ort',
+              sub: [p.street, p.housenumber, p.postcode, p.city, p.country].filter(Boolean).join(' ')
+            };
+          });
+        }
+      } catch (e) { /* unten melden */ }
     }
+
+    if (!list.length) {
+      box.innerHTML = '<div class="nav-res">Nichts gefunden oder Suchdienst nicht erreichbar. Du kannst die Koordinaten unten von Hand eintragen.</div>';
+      return;
+    }
+    window.__navResults = list;
+    box.innerHTML = list.map((it, i) =>
+      `<div class="nav-res" onclick="navPickResult(${i})"><b>${escapeHtml(it.title)}</b><small>${escapeHtml(it.sub)}</small></div>`
+    ).join('');
   };
 
   window.navPickResult = function (i) {
     const it = (window.__navResults || [])[i];
     if (!it) return;
-    edit.lat = parseFloat(it.lat); edit.lon = parseFloat(it.lon);
-    edit.label = it.display_name.split(',').slice(0, 3).join(',');
+    edit.lat = it.lat; edit.lon = it.lon; edit.label = it.sub || it.title;
     const nameEl = document.getElementById('navName');
-    if (nameEl && !nameEl.value.trim()) nameEl.value = it.display_name.split(',')[0];
+    if (nameEl && !nameEl.value.trim()) nameEl.value = it.title;
+    const f = document.getElementById('navCoords');
+    if (f) f.value = it.lat.toFixed(5) + ', ' + it.lon.toFixed(5);
     document.getElementById('navResults').innerHTML = '';
-    document.getElementById('navPicked').textContent = '✓ ' + edit.label;
+    document.getElementById('navPicked').textContent = '✓ ' + (it.sub || it.title);
   };
 
   window.navSave = function () {
-    const name = (document.getElementById('navName') || {}).value || '';
-    if (!name.trim()) { toast('Bitte einen Namen eingeben'); return; }
-    if (!edit.lat) { toast('Bitte eine Position wählen'); return; }
+    const name = ((document.getElementById('navName') || {}).value || '').trim();
+    if (!name) { toast('Bitte einen Namen eingeben'); return; }
+
+    // Koordinatenfeld hat Vorrang, falls es ausgefüllt ist
+    const raw = ((document.getElementById('navCoords') || {}).value || '').trim();
+    if (raw) {
+      const m = raw.replace(/\s/g, '').split(',');
+      const la = parseFloat(m[0]), lo = parseFloat(m[1]);
+      if (m.length !== 2 || isNaN(la) || isNaN(lo) || Math.abs(la) > 90 || Math.abs(lo) > 180) {
+        toast('Koordinaten bitte als «47.4021, 8.6182»'); return;
+      }
+      edit.lat = la; edit.lon = lo;
+      if (!edit.label) edit.label = la.toFixed(5) + ', ' + lo.toFixed(5);
+    }
+
+    if (edit.lat === null || edit.lat === undefined) {
+      toast('Bitte Standort übernehmen, Adresse suchen oder Koordinaten eintragen'); return;
+    }
+
     if (edit.id) {
       const d = byId(edit.id);
-      Object.assign(d, { name: name.trim(), icon: edit.icon, lat: edit.lat, lon: edit.lon, address: edit.label });
+      if (d) Object.assign(d, { name: name, icon: edit.icon, lat: edit.lat, lon: edit.lon, address: edit.label });
     } else {
-      dests.push({ id: 'd' + Date.now(), name: name.trim(), icon: edit.icon, lat: edit.lat, lon: edit.lon, address: edit.label });
+      dests.push({ id: 'd' + Date.now(), name: name, icon: edit.icon, lat: edit.lat, lon: edit.lon, address: edit.label });
     }
     saveDests(); renderTiles(); closeModal(); toast('Ziel gespeichert');
   };
@@ -1590,9 +1726,15 @@ function openWhatsApp() { openExternal('whatsapp://app', 'https://web.whatsapp.c
     if (!d.lat) { window.navEditor(id); return; }
     if (typeof rideActive !== 'undefined' && rideActive) { toast('Es läuft bereits eine Fahrt'); return; }
     target = d;
+    window.__navCurrentDest = d.name;
     baseRange = await currentRange();
     startRide();                   // bestehende Fahrtaufzeichnung
     showPanel();
+    follow = true;
+    // Navigation spielt sich in der Karte ab: Vollbild zu, Karte auf
+    navMinimize();
+    if (typeof setView === 'function') setView('karte');
+    setTimeout(() => { if (typeof mapObj !== 'undefined' && mapObj) mapObj.invalidateSize(); }, 200);
     routeNow(true);
   };
 
@@ -1609,6 +1751,8 @@ function openWhatsApp() { openExternal('whatsapp://app', 'https://web.whatsapp.c
     const el = document.getElementById('rmNav');
     if (!el || !target) return;
     el.style.display = '';
+    const mp = document.getElementById('navMapPanel'); if (mp) mp.style.display = '';
+    const pk = document.getElementById('navMapPicker'); if (pk) pk.style.display = 'none';
     document.getElementById('rmNavDest').textContent = target.name;
     document.getElementById('rmNavInstr').textContent = 'Route wird berechnet …';
     if (tickInt) clearInterval(tickInt);
@@ -1619,6 +1763,8 @@ function openWhatsApp() { openExternal('whatsapp://app', 'https://web.whatsapp.c
   function hidePanel() {
     const el = document.getElementById('rmNav');
     if (el) el.style.display = 'none';
+    const mp = document.getElementById('navMapPanel'); if (mp) mp.style.display = 'none';
+    const pk = document.getElementById('navMapPicker'); if (pk) pk.style.display = '';
     if (tickInt) { clearInterval(tickInt); tickInt = null; }
   }
 
@@ -1639,11 +1785,58 @@ function openWhatsApp() { openExternal('whatsapp://app', 'https://web.whatsapp.c
     if (leftEl) leftEl.style.color = critical ? 'var(--danger)' : '';
     if (warnEl) warnEl.style.display = critical ? '' : 'none';
 
+    let etaTxt = '–';
+    if (etaSec) {
+      const at = new Date(Date.now() + etaSec * 1000);
+      etaTxt = at.toLocaleTimeString('de-CH', { timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit' });
+    }
+    setText('rmNavEta', etaTxt);
+    setText('mapNavEta', etaTxt);
+
     const pill = document.getElementById('navPillText');
     if (pill) pill.textContent = `${fmtKm(driven)} km · ${target ? target.name : 'Fahrt'}${toGoKm !== null ? ' · noch ' + fmtKm(toGoKm) + ' km' : ''}`;
 
+    // gleiche Werte in der Karten-Ansicht
+    setText('mapNavToGo', toGoKm === null ? '–' : fmtKm(toGoKm) + ' km');
+    setText('mapNavDriven', fmtKm(driven) + ' km');
+    setText('mapNavLeft', left === null ? '–' : fmtKm(left) + ' km');
+    const mw = document.getElementById('mapNavWarn');
+    if (mw) mw.style.display = critical ? '' : 'none';
+    const mleft = document.getElementById('mapNavLeft');
+    if (mleft) mleft.style.color = critical ? 'var(--danger)' : '';
+    const mi = document.getElementById('mapNavInstr'), ri = document.getElementById('rmNavInstr');
+    if (mi && ri) mi.textContent = ri.textContent;
+    const ma = document.getElementById('mapNavArrow'), ra = document.getElementById('rmNavArrow');
+    if (ma && ra) ma.textContent = ra.textContent;
+
+    followMe();
+
     // alle 5 Sekunden Route prüfen
     if (Date.now() - lastRouteAt > 5000) routeNow(false);
+  }
+
+  function setText(id, t) { const e = document.getElementById(id); if (e) e.textContent = t; }
+
+  let follow = true;
+  window.navToggleFollow = function () {
+    follow = !follow;
+    const b = document.getElementById('navFollowBtn');
+    if (b) b.textContent = 'Folgen: ' + (follow ? 'an' : 'aus');
+  };
+
+  function followMe() {
+    if (typeof mapObj === 'undefined' || !mapObj || typeof L === 'undefined') return;
+    const p = here();
+    if (!p) return;
+    try {
+      if (typeof mapMarker !== 'undefined' && mapMarker) mapMarker.setLatLng([p.lat, p.lon]);
+      else {
+        window.mapMarker = L.marker([p.lat, p.lon], {
+          icon: L.divIcon({ className: '', html: '<div class="rp-dot"></div>', iconSize: [18, 18], iconAnchor: [9, 9] })
+        }).addTo(mapObj);
+      }
+      if (follow) mapObj.setView([p.lat, p.lon], Math.max(mapObj.getZoom() || 15, 16), { animate: true });
+    } catch (e) {}
   }
 
   /* ---------------- Route (OSRM) ---------------- */
@@ -1673,6 +1866,7 @@ function openWhatsApp() { openExternal('whatsapp://app', 'https://web.whatsapp.c
       if (!r) throw new Error('keine Route');
       routePts = r.geometry.coordinates.map(c => [c[1], c[0]]);
       toGoKm = r.distance / 1000;
+      etaSec = r.duration || null;
       drawRoute();
       setInstruction(r, p);
       if (toGoKm * 1000 < 60) {
@@ -1741,7 +1935,8 @@ function openWhatsApp() { openExternal('whatsapp://app', 'https://web.whatsapp.c
 
   function navEnd() {
     hidePanel();
-    target = null; toGoKm = null; routePts = []; baseRange = null;
+    target = null; toGoKm = null; etaSec = null; routePts = []; baseRange = null;
+    window.__navCurrentDest = null;
     const pill = document.getElementById('navPill');
     if (pill) pill.classList.remove('open');
     if (routeLine && typeof mapObj !== 'undefined' && mapObj) { mapObj.removeLayer(routeLine); routeLine = null; }
@@ -1771,6 +1966,300 @@ function openWhatsApp() { openExternal('whatsapp://app', 'https://web.whatsapp.c
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', renderTiles);
   } else renderTiles();
+
+})();
+
+/* ============================================================
+   RidePilot – Fahrten mit Details: Tempo, Route, Ziel
+   ============================================================ */
+(function () {
+
+  let sampler = null;
+  let stats = null;   // {max, sum, n, moving, samples, dest}
+  let tripMap = null;
+
+  /* ---------- Aufzeichnung ---------- */
+  const origStart = window.startRide;
+  window.startRide = function () {
+    const r = origStart.apply(this, arguments);
+    stats = { max: 0, sum: 0, n: 0, moving: 0, samples: [], dest: null };
+    if (sampler) clearInterval(sampler);
+    sampler = setInterval(() => {
+      if (typeof rideActive === 'undefined' || !rideActive) return;
+      const v = (typeof rideSpeedKmh === 'number' && isFinite(rideSpeedKmh)) ? rideSpeedKmh : 0;
+      stats.n++; stats.sum += v;
+      if (v > stats.max) stats.max = v;
+      if (v > 3) stats.moving++;
+      if (stats.samples.length < 900) stats.samples.push(Math.round(v));
+    }, 1000);
+    return r;
+  };
+
+  const origStop = window.stopRide;
+  window.stopRide = async function () {
+    const snap = stats ? JSON.parse(JSON.stringify(stats)) : null;
+    const destName = (window.__navCurrentDest || null);
+    if (sampler) { clearInterval(sampler); sampler = null; }
+    const r = await origStop.apply(this, arguments);
+    stats = null;
+    try {
+      if (!snap) return r;
+      const trips = (await idbGetAll('trips')).sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+      const t = trips[0];
+      if (!t || t.manual) return r;
+      // nur die eben gespeicherte Fahrt ergänzen (max. 2 Minuten alt)
+      if (Date.now() - new Date(t.endTime || t.startTime).getTime() > 120000) return r;
+      const step = Math.max(1, Math.ceil(snap.samples.length / 180));
+      t.maxKmh = Math.round(snap.max);
+      t.movingSec = snap.moving;
+      t.avgKmh = snap.moving > 0 ? Math.round((t.distanceKm / (snap.moving / 3600)) * 10) / 10 : 0;
+      t.speeds = snap.samples.filter((_, i) => i % step === 0);
+      if (destName) t.destName = destName;
+      await idbPut('trips', t);
+      if (typeof currentView !== 'undefined' && currentView === 'fahrten') renderFahrten();
+    } catch (e) { console.error('Fahrtdetails:', e); }
+    return r;
+  };
+
+  /* ---------- Liste ---------- */
+  window.renderFahrten = async function () {
+    try {
+      const trips = (await idbGetAll('trips')).sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+      const wrap = document.getElementById('tripList');
+      if (!wrap) return;
+      if (!trips.length) {
+        wrap.innerHTML = `<div class="empty"><div class="t">Noch keine Fahrten</div><div class="s">Starte deine erste Fahrt oder erfasse sie manuell.</div></div>`;
+        return;
+      }
+
+      const week = trips.filter(t => Date.now() - new Date(t.startTime) < 7 * 86400000);
+      const weekKm = week.reduce((a, t) => a + (t.distanceKm || 0), 0);
+
+      wrap.innerHTML = `
+        <div class="card card-tight" style="margin-bottom:12px;">
+          <div style="display:flex;text-align:center;">
+            <div style="flex:1;"><div class="num" style="font-size:20px;font-weight:800;">${fmtKm(weekKm)}</div><div class="field-note">km / 7 Tage</div></div>
+            <div style="flex:1;"><div class="num" style="font-size:20px;font-weight:800;">${week.length}</div><div class="field-note">Fahrten</div></div>
+            <div style="flex:1;"><div class="num" style="font-size:20px;font-weight:800;">${fmtKm(trips.reduce((a, t) => a + (t.distanceKm || 0), 0))}</div><div class="field-note">km gesamt</div></div>
+          </div>
+        </div>
+        <div class="card card-tight">` + trips.map(t => {
+          const bits = [];
+          if (t.durationSec > 0) bits.push(fmtDuration(t.durationSec));
+          if (t.avgKmh) bits.push('Ø ' + t.avgKmh + ' km/h');
+          if (t.maxKmh) bits.push('max ' + t.maxKmh);
+          if (t.manual) bits.push('manuell');
+          if (!bits.length) bits.push(t.note || 'Ohne Notiz');
+          return `
+          <div class="list-row" style="cursor:pointer;" onclick="showTripDetail(${t.id})">
+            <div class="icon">${t.type === 'incident' ? '⚠︎' : (t.track && t.track.length > 1 ? '🛣️' : '▶︎')}</div>
+            <div class="main">
+              <div class="title">${t.destName ? '→ ' + t.destName : fmtDate(t.startTime)}</div>
+              <div class="sub">${t.destName ? fmtDateTime(t.startTime) + ' · ' : ''}${bits.join(' · ')}</div>
+            </div>
+            <div class="trail">${fmtKm(t.distanceKm)} km</div>
+          </div>`;
+        }).join('') + `</div>`;
+    } catch (err) { console.error('renderFahrten:', err); showStorageError('tripList'); }
+  };
+
+  /* ---------- Detail ---------- */
+  window.showTripDetail = async function (id) {
+    const t = await idbGet('trips', id);
+    if (!t) return;
+
+    const hasTrack = Array.isArray(t.track) && t.track.length > 1;
+    const box = (v, l) => `<div style="flex:1;"><div class="num" style="font-size:19px;font-weight:800;">${v}</div><div class="field-note">${l}</div></div>`;
+
+    openModal(`
+      <h2>${t.destName ? 'Fahrt → ' + t.destName : 'Fahrt'}</h2>
+      <div class="desc">${fmtDateTime(t.startTime)}${t.endTime ? ' – ' + new Date(t.endTime).toLocaleTimeString('de-CH', { timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit' }) : ''}</div>
+
+      <div class="card card-tight" style="margin-bottom:12px;">
+        <div style="display:flex;text-align:center;">
+          ${box(fmtKm(t.distanceKm) + ' km', 'Strecke')}
+          ${box(t.durationSec > 0 ? fmtDuration(t.durationSec) : '–', 'Dauer')}
+        </div>
+        <div style="display:flex;text-align:center;margin-top:12px;">
+          ${box(t.avgKmh ? t.avgKmh + ' km/h' : '–', 'Ø Tempo')}
+          ${box(t.maxKmh ? t.maxKmh + ' km/h' : '–', 'Spitze')}
+          ${box(t.movingSec ? fmtDuration(t.movingSec) : '–', 'in Bewegung')}
+        </div>
+      </div>
+
+      ${hasTrack ? '<div id="tripMap" style="height:200px;border-radius:14px;overflow:hidden;margin-bottom:12px;"></div>' : '<div class="field-note" style="margin-bottom:12px;">Für diese Fahrt wurde keine Strecke aufgezeichnet.</div>'}
+
+      ${(t.speeds && t.speeds.length > 3) ? `<div class="field-note" style="margin:0 2px 4px;">Tempoverlauf (km/h)</div>${sparkline(t.speeds)}` : ''}
+
+      ${t.note ? `<div class="card card-tight" style="margin:12px 0;">${t.note}</div>` : ''}
+      ${(t.photos || []).map(p => `<img src="${p}" style="width:100%;border-radius:14px;margin-top:10px;">`).join('')}
+
+      <button class="btn btn-danger" style="margin-top:14px;" onclick="deleteTrip(${id})">Fahrt löschen</button>
+    `);
+
+    if (hasTrack) setTimeout(() => drawTripMap(t.track), 80);
+  };
+
+  function sparkline(vals) {
+    const w = 300, h = 70, max = Math.max(30, ...vals);
+    const pts = vals.map((v, i) => `${(i / (vals.length - 1)) * w},${h - (v / max) * (h - 6) - 3}`).join(' ');
+    return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:70px;background:var(--surface-alt);border-radius:12px;">
+      <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      <text x="4" y="12" font-size="9" fill="var(--text-3)">${Math.round(max)}</text>
+    </svg>`;
+  }
+
+  function drawTripMap(track) {
+    if (typeof L === 'undefined') return;
+    const el = document.getElementById('tripMap');
+    if (!el) return;
+    try {
+      if (tripMap) { tripMap.remove(); tripMap = null; }
+      tripMap = L.map(el, { zoomControl: false, attributionControl: true });
+      tileLayerFor(document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light').addTo(tripMap);
+      const line = L.polyline(track, { color: '#0E7C86', weight: 5, opacity: .9 }).addTo(tripMap);
+      L.circleMarker(track[0], { radius: 6, color: '#fff', weight: 2, fillColor: '#0E7C86', fillOpacity: 1 }).addTo(tripMap);
+      L.circleMarker(track[track.length - 1], { radius: 6, color: '#fff', weight: 2, fillColor: '#C23C31', fillOpacity: 1 }).addTo(tripMap);
+      tripMap.fitBounds(line.getBounds(), { padding: [20, 20] });
+      setTimeout(() => tripMap.invalidateSize(), 60);
+    } catch (e) { console.error('tripMap:', e); }
+  }
+
+})();
+
+/* ============================================================
+   RidePilot – E-Roller-Profil, Wartungsvorlagen, Papiere (CH)
+   Grundlage für die spätere Store-App «RidePilot E-Roller»
+   ============================================================ */
+(function () {
+
+  const RECHT = 'Vorlagen und Erinnerungen, keine Rechtsauskunft. Fristen und Kategorien ' +
+    'unterscheiden sich nach Bauart, Tempo und Kanton – beim Strassenverkehrsamt prüfen.';
+
+  const VORLAGEN = [
+    { title: 'Bremsen prüfen',            intervalKm: 2000, intervalMonths: 6 },
+    { title: 'Reifendruck prüfen',        intervalKm: 500,  intervalMonths: 1 },
+    { title: 'Reifenprofil prüfen',       intervalKm: 3000, intervalMonths: 6 },
+    { title: 'Akku-Zustand prüfen',       intervalKm: null, intervalMonths: 6 },
+    { title: 'Ladegerät und Kabel prüfen', intervalKm: null, intervalMonths: 6 },
+    { title: 'Schrauben nachziehen',      intervalKm: 2000, intervalMonths: 6 },
+    { title: 'Beleuchtung und Blinker',   intervalKm: null, intervalMonths: 3 },
+    { title: 'Kontrolle beim Händler',    intervalKm: 5000, intervalMonths: 12 }
+  ];
+
+  const PAPIERE = [
+    ['Fahrzeugausweis / Typenschein', 'Bauart und Kategorie des Rollers'],
+    ['Haftpflichtversicherung', 'Police, Ablaufdatum, Notfallnummer'],
+    ['Kontrollschild', 'Nummer und Kanton'],
+    ['Führerausweis', 'Kategorie je nach Bauart und Höchsttempo'],
+    ['Helm', 'Kaufdatum – Helme altern, Empfehlung Ersatz nach 5 Jahren'],
+    ['Kaufbeleg und Garantie', 'Akku-Garantie gesondert beachten'],
+    ['Schlüsselnummer und Rahmennummer', 'Wichtig bei Diebstahl']
+  ];
+
+  const FELDER = [
+    ['vHersteller', 'Hersteller', 'z. B. Volta'],
+    ['vModell2',    'Modell', 'z. B. VSX'],
+    ['vBaujahr',    'Baujahr', '2024'],
+    ['vTempo',      'Höchstgeschwindigkeit (km/h)', '25'],
+    ['vAkku',       'Akkukapazität (kWh)', '2.0'],
+    ['vReichweite', 'Reichweite neu (km)', '42'],
+    ['vRahmen',     'Rahmennummer', 'optional'],
+    ['vKauf',       'Kaufdatum', 'TT.MM.JJJJ'],
+    ['vVers',       'Versicherung / Police', 'z. B. Allianz, Nr. …'],
+    ['vHaendler',   'Händler / Service', 'Name und Telefon']
+  ];
+
+  /* ---------- Profilkarte in den Einstellungen erweitern ---------- */
+  async function buildProfile() {
+    const modelInput = document.getElementById('vModel');
+    if (!modelInput) return;
+    const card = modelInput.closest('.card');
+    if (!card || card.dataset.rpExt) return;
+    card.dataset.rpExt = '1';
+
+    let v = {};
+    try { v = (await idbGet('vehicle', 'main')) || {}; } catch (e) {}
+
+    modelInput.closest('.card').querySelectorAll('label').forEach(l => {
+      if (l.getAttribute('for') === 'vModel') l.remove();
+    });
+    modelInput.remove();
+
+    const btn = card.querySelector('button');
+    const html = FELDER.map(([id, label, ph]) =>
+      `<label for="${id}">${label}</label>
+       <input type="text" id="${id}" placeholder="${ph}" value="${(v[id] || '').replace(/"/g, '&quot;')}">`
+    ).join('');
+    btn.insertAdjacentHTML('beforebegin', html);
+
+    const origSave = window.saveVehicle;
+    window.saveVehicle = async function () {
+      const data = { id: 'main', name: (document.getElementById('vName').value || '').trim(),
+                     plate: (document.getElementById('vPlate').value || '').trim() };
+      FELDER.forEach(([id]) => { const e = document.getElementById(id); if (e) data[id] = e.value.trim(); });
+      data.model = ((data.vHersteller || '') + ' ' + (data.vModell2 || '')).trim() || 'E-Roller';
+      await idbPut('vehicle', data);
+      toast('Fahrzeugprofil gespeichert');
+      renderDashboard();
+    };
+  }
+
+  /* ---------- Papiere-Karte ---------- */
+  function buildPapers() {
+    const view = document.getElementById('view-dokumente');
+    if (!view || document.getElementById('rpPapers')) return;
+    const html = `
+      <div class="section-title">Papiere & Pflichten (Schweiz)</div>
+      <div class="card card-tight" id="rpPapers">
+        ${PAPIERE.map(([t, s]) => `
+          <div class="list-row"><div class="main"><div class="title">${t}</div><div class="sub">${s}</div></div>
+          <span class="pill pill-ok">Vorlage</span></div>`).join('')}
+      </div>
+      <div class="section-title">Notfall</div>
+      <div class="card card-tight">
+        <div class="list-row"><div class="main"><div class="title">Polizei</div></div><div class="trail"><a href="tel:117">117</a></div></div>
+        <div class="list-row"><div class="main"><div class="title">Sanität</div></div><div class="trail"><a href="tel:144">144</a></div></div>
+        <div class="list-row"><div class="main"><div class="title">Pannenhilfe TCS</div></div><div class="trail"><a href="tel:140">140</a></div></div>
+        <div class="list-row"><div class="main"><div class="title">Europäischer Notruf</div></div><div class="trail"><a href="tel:112">112</a></div></div>
+      </div>
+      <div class="field-note" style="margin:0 2px 20px;">${RECHT}</div>`;
+    view.insertAdjacentHTML('beforeend', html);
+  }
+
+  /* ---------- Wartungsvorlagen ---------- */
+  function buildMaintButton() {
+    const view = document.getElementById('view-wartung');
+    if (!view || document.getElementById('rpTplBtn')) return;
+    const row = view.querySelector('.btn-row');
+    if (!row) return;
+    row.insertAdjacentHTML('afterend',
+      `<div class="btn-row" style="margin-bottom:16px;">
+         <button class="btn btn-secondary" id="rpTplBtn" onclick="rpAddVorlagen()">Vorlagen für E-Roller einfügen</button>
+       </div>`);
+  }
+
+  window.rpAddVorlagen = async function () {
+    try {
+      const have = await idbGetAll('maintenance');
+      const names = have.map(m => m.title);
+      const neu = VORLAGEN.filter(v => !names.includes(v.title));
+      if (!neu.length) { toast('Alle Vorlagen sind bereits vorhanden'); return; }
+      for (const v of neu) {
+        await idbPut('maintenance', {
+          title: v.title, intervalKm: v.intervalKm, intervalMonths: v.intervalMonths,
+          lastDoneDate: new Date().toISOString(), lastDoneKm: await getTotalKm(await idbGetAll('trips'))
+        });
+      }
+      toast(neu.length + ' Wartungspunkte eingefügt');
+      renderWartung();
+    } catch (e) { console.error(e); toast('Konnte Vorlagen nicht einfügen'); }
+  };
+
+  /* ---------- Start ---------- */
+  function boot() { buildProfile(); buildPapers(); buildMaintButton(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(boot, 400));
+  else setTimeout(boot, 400);
 
 })();
 
