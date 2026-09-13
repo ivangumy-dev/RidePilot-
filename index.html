@@ -261,6 +261,42 @@
 
   #map { height: 340px; width: 100%; background: var(--surface-alt); }
   .leaflet-container { font-family: 'Manrope', sans-serif; background: var(--surface-alt); }
+
+  /* ============ Navigation «Wohin?» ============ */
+  .nav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .nav-tile { background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius-md);
+              padding: 14px 10px; text-align: center; cursor: pointer; transition: transform .12s ease; }
+  .nav-tile:active { transform: scale(.96); }
+  .nav-tile .ic { font-size: 24px; line-height: 1; }
+  .nav-tile .nm { font-weight: 700; margin-top: 6px; font-size: 15px; }
+  .nav-tile .hint { font-size: 11px; color: var(--text-3); font-weight: 600; margin-top: 2px; }
+  .nav-tile.add { border-style: dashed; color: var(--text-2); }
+  .nav-sym { font-size: 22px; padding: 9px 11px; border-radius: var(--radius-sm); border: 1px solid var(--border); cursor: pointer; }
+  .nav-sym.on { border-color: var(--accent); background: var(--accent-tint); }
+  .nav-res { padding: 11px 4px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 14px; }
+  .nav-res small { display: block; color: var(--text-3); font-size: 11.5px; }
+
+  #ridemode .rm-nav { width: 100%; max-width: 340px; background: var(--surface); border: 1px solid var(--border);
+                      border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 18px; box-shadow: var(--shadow); }
+  #ridemode .rm-nav .instr { font-weight: 700; font-size: 15.5px; display: flex; gap: 8px; align-items: center; }
+  #ridemode .rm-nav .dest { font-size: 12px; color: var(--text-3); font-weight: 700; text-transform: uppercase;
+                            letter-spacing: .06em; margin-top: 10px; }
+  #ridemode .rm-nav .destname { font-size: 20px; font-weight: 800; }
+  #ridemode .rm-nav .vals { display: flex; margin-top: 10px; text-align: center; }
+  #ridemode .rm-nav .vals > div { flex: 1; }
+  #ridemode .rm-nav .vals .v { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  #ridemode .rm-nav .vals .l { font-size: 10.5px; color: var(--text-3); font-weight: 700;
+                               text-transform: uppercase; letter-spacing: .05em; }
+  #ridemode .rm-nav .warn { color: var(--danger); font-size: 12.5px; font-weight: 700; margin-top: 8px; }
+  #ridemode .rm-min { background: var(--surface-alt); border: 1px solid var(--border); border-radius: 100px;
+                      padding: 15px; font-weight: 700; width: 100%; }
+
+  #navPill { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + var(--safe-bottom));
+             z-index: 140; display: none; align-items: center; gap: 10px; background: var(--accent); color: #fff;
+             border: none; border-radius: 100px; padding: 12px 20px; font-weight: 800; font-size: 14.5px;
+             box-shadow: var(--shadow); }
+  #navPill.open { display: flex; }
+
   .leaflet-control-attribution { font-size: 9px; }
   .rp-dot { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); border: 3px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.2); }
 
@@ -317,6 +353,13 @@
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
       Fahrt starten
     </button>
+
+    <div class="section-title">Wohin?</div>
+    <div class="card card-tight" style="margin-bottom:14px;">
+      <div class="nav-grid" id="navTiles"></div>
+      <div class="field-note" style="margin:12px 2px 0;">Ziel antippen – Route, Kilometer und Restreichweite laufen automatisch mit. Ziele bleiben nur auf diesem iPhone.</div>
+      <div class="link-row" onclick="navManage()" style="cursor:pointer;margin-top:6px;"><span class="l">Ziele bearbeiten</span></div>
+    </div>
 
     <div class="quick-grid">
       <button class="quick-btn" onclick="openMessages()">
@@ -513,6 +556,16 @@
 <!-- RIDE MODE OVERLAY -->
 <div id="ridemode">
   <div class="rm-label">Fahrt läuft</div>
+  <div class="rm-nav" id="rmNav" style="display:none;">
+    <div class="instr"><span id="rmNavArrow">➜</span><span id="rmNavInstr">Route wird berechnet …</span></div>
+    <div class="dest">Ziel</div>
+    <div class="destname" id="rmNavDest">–</div>
+    <div class="vals">
+      <div><div class="v" id="rmNavToGo">–</div><div class="l">bis Ziel</div></div>
+      <div><div class="v" id="rmNavLeft">–</div><div class="l">Restreichweite</div></div>
+    </div>
+    <div class="warn" id="rmNavWarn" style="display:none;">⚠︎ Restreichweite reicht nicht bis zum Ziel.</div>
+  </div>
   <div class="rm-timer" id="rmTimer">00:00</div>
   <div class="rm-dist"><span class="num" id="rmDist">0.0</span> <span class="unit">km</span></div>
   <div class="rm-speed"><span class="num" id="rmSpeed">0</span> <span class="unit">km/h</span></div>
@@ -523,6 +576,7 @@
       Foto hinzufügen
     </button>
     <div class="rm-shots" id="rmShots"></div>
+    <button class="rm-min" onclick="navMinimize()">In den Hintergrund – Fahrt läuft weiter</button>
     <button class="rm-stop" onclick="stopRide()">Fahrt beenden</button>
   </div>
   <input type="file" id="ridePhotoInput" accept="image/*" capture="environment" style="display:none" onchange="handleRidePhoto(event)">
@@ -533,6 +587,7 @@
   <div class="modal" id="modalContent" role="dialog" aria-modal="true"></div>
 </div>
 
+<button id="navPill" onclick="navMaximize()"><span id="navPillText">Fahrt läuft</span></button>
 <div id="toast"></div>
 <div id="print-area"></div>
 
@@ -1365,6 +1420,360 @@ function openMessages() { openExternal('sms:', null); }
 function openWhatsApp() { openExternal('whatsapp://app', 'https://web.whatsapp.com'); }
 
 /* ============ Fahrten-Löschen von Dashboard-Karte (Wartung Klick) ============ */
+</script>
+<script>
+/* ============================================================
+   RidePilot – Navigation «Wohin?»
+   Ergänzung zur bestehenden App. Ziele, Route, Restreichweite.
+   Alle Ziele bleiben lokal auf dem Gerät (localStorage).
+   ============================================================ */
+(function () {
+
+  const DKEY = 'rp-destinations';
+  const RKEY = 'rp-nav-ride';
+  const SYMS = ['🏠', '🛋️', '🧑', '🛍️', '🏢', '🍽️', '📍', '⭐️'];
+  const START = [
+    { id: 'd1', name: 'Zuhause',      icon: '🏠' },
+    { id: 'd2', name: 'Glattzentrum', icon: '🛍️' },
+    { id: 'd3', name: 'Wohnzimmer',   icon: '🛋️' },
+    { id: 'd4', name: 'Remo',         icon: '🧑' },
+    { id: 'd5', name: 'Dafi',         icon: '🧑' }
+  ];
+
+  let dests = loadDests();
+  let target = null;          // aktuelles Ziel {id,name,icon,lat,lon}
+  let baseRange = null;       // Restreichweite bei Fahrtbeginn (km)
+  let toGoKm = null;          // verbleibende Strecke laut Route
+  let routePts = [];          // Routenpunkte für Umweg-Erkennung
+  let lastRouteAt = 0;
+  let tickInt = null;
+  let routeLine = null, destMarker = null;
+  let edit = null;            // Zustand im Ziel-Editor
+
+  /* ---------------- Speicher ---------------- */
+  function loadDests() {
+    try {
+      const raw = localStorage.getItem(DKEY);
+      if (!raw) return START.slice();
+      const v = JSON.parse(raw);
+      return Array.isArray(v) && v.length ? v : START.slice();
+    } catch (e) { return START.slice(); }
+  }
+  function saveDests() {
+    try { localStorage.setItem(DKEY, JSON.stringify(dests)); } catch (e) {}
+  }
+  function byId(id) { return dests.find(d => d.id === id) || null; }
+
+  /* ---------------- Kacheln ---------------- */
+  function renderTiles() {
+    const box = document.getElementById('navTiles');
+    if (!box) return;
+    box.innerHTML = dests.map(d => `
+      <div class="nav-tile" onclick="navGo('${d.id}')" oncontextmenu="navEditor('${d.id}');return false;">
+        <div class="ic">${d.icon}</div>
+        <div class="nm">${escapeHtml(d.name)}</div>
+        ${d.lat ? '<div class="hint">gedrückt halten zum Ändern</div>' : '<div class="hint">Position setzen</div>'}
+      </div>`).join('') +
+      `<div class="nav-tile add" onclick="navEditor(null)"><div class="ic">＋</div><div class="nm">Neues Ziel</div></div>`;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  /* ---------------- Ziel-Editor (nutzt das bestehende Modal) ---------------- */
+  window.navEditor = function (id) {
+    const d = id ? byId(id) : null;
+    edit = d
+      ? { id: d.id, name: d.name, icon: d.icon, lat: d.lat || null, lon: d.lon || null, label: d.address || '' }
+      : { id: null, name: '', icon: '📍', lat: null, lon: null, label: '' };
+
+    openModal(`
+      <h2>${d ? escapeHtml(d.name) : 'Neues Ziel'}</h2>
+      <div class="desc">Name, Symbol und Position. Alles bleibt auf diesem Gerät.</div>
+      <label>Name</label>
+      <input type="text" id="navName" placeholder="z. B. Zuhause" value="${escapeHtml(edit.name)}">
+      <label>Symbol</label>
+      <div id="navSyms" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px;"></div>
+      <label>Position</label>
+      <button class="btn" style="margin-bottom:10px;" onclick="navUseHere()">📍 Aktuellen Standort übernehmen</button>
+      <input type="text" id="navQuery" placeholder="oder Adresse suchen" autocomplete="off">
+      <button class="btn" style="margin:10px 0;" onclick="navSearch()">Suchen</button>
+      <div id="navResults"></div>
+      <div id="navPicked" class="field-note" style="margin:10px 2px;">${edit.lat ? '✓ Position gespeichert' : 'Noch keine Position.'}</div>
+      <button class="btn btn-primary" style="margin-top:14px;" onclick="navSave()">Sichern</button>
+      ${d ? `<button class="btn" style="margin-top:10px;color:var(--danger);" onclick="navDelete('${d.id}')">Ziel löschen</button>` : ''}
+    `);
+    renderSyms();
+  };
+
+  function renderSyms() {
+    const box = document.getElementById('navSyms');
+    if (!box) return;
+    box.innerHTML = SYMS.map(s => `<span class="nav-sym ${s === edit.icon ? 'on' : ''}" onclick="navPickSym('${s}')">${s}</span>`).join('');
+  }
+  window.navPickSym = function (s) { edit.icon = s; renderSyms(); };
+
+  window.navUseHere = function () {
+    const note = document.getElementById('navPicked');
+    if (note) note.textContent = 'Standort wird ermittelt …';
+    navigator.geolocation.getCurrentPosition(p => {
+      edit.lat = p.coords.latitude; edit.lon = p.coords.longitude; edit.label = 'aktueller Standort';
+      if (note) note.textContent = '✓ Aktueller Standort übernommen';
+    }, () => {
+      if (note) note.textContent = 'Standort nicht verfügbar – Ortung für Safari erlauben.';
+    }, { enableHighAccuracy: true, timeout: 10000 });
+  };
+
+  window.navSearch = async function () {
+    const q = (document.getElementById('navQuery') || {}).value || '';
+    const box = document.getElementById('navResults');
+    if (!q.trim() || !box) return;
+    box.innerHTML = '<div class="nav-res">Suche …</div>';
+    try {
+      const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=ch&q=' + encodeURIComponent(q));
+      const list = await r.json();
+      if (!list.length) { box.innerHTML = '<div class="nav-res">Nichts gefunden.</div>'; return; }
+      box.innerHTML = list.map((it, i) =>
+        `<div class="nav-res" onclick="navPickResult(${i})"><b>${escapeHtml(it.display_name.split(',')[0])}</b><small>${escapeHtml(it.display_name)}</small></div>`
+      ).join('');
+      window.__navResults = list;
+    } catch (e) {
+      box.innerHTML = '<div class="nav-res">Suche nicht erreichbar.</div>';
+    }
+  };
+
+  window.navPickResult = function (i) {
+    const it = (window.__navResults || [])[i];
+    if (!it) return;
+    edit.lat = parseFloat(it.lat); edit.lon = parseFloat(it.lon);
+    edit.label = it.display_name.split(',').slice(0, 3).join(',');
+    const nameEl = document.getElementById('navName');
+    if (nameEl && !nameEl.value.trim()) nameEl.value = it.display_name.split(',')[0];
+    document.getElementById('navResults').innerHTML = '';
+    document.getElementById('navPicked').textContent = '✓ ' + edit.label;
+  };
+
+  window.navSave = function () {
+    const name = (document.getElementById('navName') || {}).value || '';
+    if (!name.trim()) { toast('Bitte einen Namen eingeben'); return; }
+    if (!edit.lat) { toast('Bitte eine Position wählen'); return; }
+    if (edit.id) {
+      const d = byId(edit.id);
+      Object.assign(d, { name: name.trim(), icon: edit.icon, lat: edit.lat, lon: edit.lon, address: edit.label });
+    } else {
+      dests.push({ id: 'd' + Date.now(), name: name.trim(), icon: edit.icon, lat: edit.lat, lon: edit.lon, address: edit.label });
+    }
+    saveDests(); renderTiles(); closeModal(); toast('Ziel gespeichert');
+  };
+
+  window.navDelete = function (id) {
+    dests = dests.filter(d => d.id !== id);
+    saveDests(); renderTiles(); closeModal(); toast('Ziel gelöscht');
+  };
+
+
+  /* ---------------- Ziele verwalten ---------------- */
+  window.navManage = function () {
+    openModal(`
+      <h2>Ziele bearbeiten</h2>
+      <div class="desc">Ziel antippen, um Name, Symbol oder Position zu ändern.</div>
+      ${dests.map(d => `<div class="nav-res" onclick="navEditor('${d.id}')"><b>${d.icon} ${escapeHtml(d.name)}</b><small>${d.lat ? escapeHtml(d.address || 'Position gespeichert') : 'noch keine Position'}</small></div>`).join('')}
+      <button class="btn btn-primary" style="margin-top:14px;" onclick="navEditor(null)">Neues Ziel</button>
+    `);
+  };
+
+  /* ---------------- Fahrt mit Ziel ---------------- */
+  window.navGo = async function (id) {
+    const d = byId(id);
+    if (!d) return;
+    if (!d.lat) { window.navEditor(id); return; }
+    if (typeof rideActive !== 'undefined' && rideActive) { toast('Es läuft bereits eine Fahrt'); return; }
+    target = d;
+    baseRange = await currentRange();
+    startRide();                   // bestehende Fahrtaufzeichnung
+    showPanel();
+    routeNow(true);
+  };
+
+  async function currentRange() {
+    try {
+      const cal = await getLatestCalibration();
+      if (!cal) return null;
+      const totalKm = await getTotalKm(await idbGetAll('trips'));
+      return Math.max(0, cal.value - (totalKm - cal.odometerAtCalibration));
+    } catch (e) { return null; }
+  }
+
+  function showPanel() {
+    const el = document.getElementById('rmNav');
+    if (!el || !target) return;
+    el.style.display = '';
+    document.getElementById('rmNavDest').textContent = target.name;
+    document.getElementById('rmNavInstr').textContent = 'Route wird berechnet …';
+    if (tickInt) clearInterval(tickInt);
+    tickInt = setInterval(tick, 1000);
+    tick();
+  }
+
+  function hidePanel() {
+    const el = document.getElementById('rmNav');
+    if (el) el.style.display = 'none';
+    if (tickInt) { clearInterval(tickInt); tickInt = null; }
+  }
+
+  function tick() {
+    if (typeof rideActive === 'undefined' || !rideActive) { navEnd(); return; }
+    const driven = (typeof rideDistance === 'number') ? rideDistance : 0;
+
+    const toGoEl = document.getElementById('rmNavToGo');
+    const leftEl = document.getElementById('rmNavLeft');
+    const warnEl = document.getElementById('rmNavWarn');
+    if (toGoEl) toGoEl.textContent = toGoKm === null ? '–' : fmtKm(toGoKm) + ' km';
+
+    let left = null;
+    if (baseRange !== null) left = Math.max(0, baseRange - driven);
+    if (leftEl) leftEl.textContent = left === null ? '–' : fmtKm(left) + ' km';
+
+    const critical = (left !== null && toGoKm !== null && left < toGoKm);
+    if (leftEl) leftEl.style.color = critical ? 'var(--danger)' : '';
+    if (warnEl) warnEl.style.display = critical ? '' : 'none';
+
+    const pill = document.getElementById('navPillText');
+    if (pill) pill.textContent = `${fmtKm(driven)} km · ${target ? target.name : 'Fahrt'}${toGoKm !== null ? ' · noch ' + fmtKm(toGoKm) + ' km' : ''}`;
+
+    // alle 5 Sekunden Route prüfen
+    if (Date.now() - lastRouteAt > 5000) routeNow(false);
+  }
+
+  /* ---------------- Route (OSRM) ---------------- */
+  function here() {
+    if (typeof rideLastPos !== 'undefined' && rideLastPos) return { lat: rideLastPos.lat, lon: rideLastPos.lng };
+    return null;
+  }
+
+  function offRoute(p) {
+    if (!routePts.length) return true;
+    let min = Infinity;
+    for (const c of routePts) min = Math.min(min, haversine(p.lat, p.lon, c[0], c[1]) * 1000);
+    return min > 70;
+  }
+
+  async function routeNow(force) {
+    if (!target) return;
+    const p = here();
+    if (!p) return;
+    if (!force && Date.now() - lastRouteAt < 20000 && !offRoute(p)) return;
+    lastRouteAt = Date.now();
+    try {
+      const url = `https://router.project-osrm.org/route/v1/driving/${p.lon},${p.lat};${target.lon},${target.lat}?overview=full&geometries=geojson&steps=true`;
+      const res = await fetch(url);
+      const j = await res.json();
+      const r = j.routes && j.routes[0];
+      if (!r) throw new Error('keine Route');
+      routePts = r.geometry.coordinates.map(c => [c[1], c[0]]);
+      toGoKm = r.distance / 1000;
+      drawRoute();
+      setInstruction(r, p);
+      if (toGoKm * 1000 < 60) {
+        const el = document.getElementById('rmNavInstr');
+        if (el) el.textContent = 'Ziel erreicht';
+      }
+    } catch (e) {
+      toGoKm = haversine(p.lat, p.lon, target.lat, target.lon);
+      const el = document.getElementById('rmNavInstr');
+      if (el) el.textContent = 'Richtung ' + target.name + ' (Luftlinie)';
+    }
+  }
+
+  const TURNS = {
+    'turn-left': ['↰', 'Links abbiegen'], 'turn-right': ['↱', 'Rechts abbiegen'],
+    'turn-slight left': ['↖︎', 'Leicht links'], 'turn-slight right': ['↗︎', 'Leicht rechts'],
+    'turn-sharp left': ['↰', 'Scharf links'], 'turn-sharp right': ['↱', 'Scharf rechts'],
+    'turn-straight': ['↑', 'Geradeaus'], 'depart': ['➜', 'Losfahren'], 'arrive': ['⚑', 'Ziel erreicht'],
+    'roundabout': ['↻', 'Im Kreisel'], 'rotary': ['↻', 'Im Kreisel'], 'merge': ['⤳', 'Einfädeln'],
+    'fork': ['⑂', 'An der Gabelung'], 'continue': ['↑', 'Weiter'], 'end of road': ['⤷', 'Am Strassenende'],
+    'new name': ['↑', 'Weiter']
+  };
+
+  function setInstruction(route, p) {
+    const steps = (route.legs && route.legs[0] && route.legs[0].steps) || [];
+    let best = null, bestD = Infinity;
+    for (const s of steps) {
+      const loc = s.maneuver && s.maneuver.location;
+      if (!loc) continue;
+      const d = haversine(p.lat, p.lon, loc[1], loc[0]) * 1000;
+      if (d > 15 && d < bestD) { bestD = d; best = s; }
+    }
+    if (!best) best = steps[0];
+    const arrow = document.getElementById('rmNavArrow');
+    const text = document.getElementById('rmNavInstr');
+    if (!best || !text) return;
+    const m = best.maneuver || {};
+    const key = (m.type === 'turn' || m.type === 'continue') ? m.type + '-' + (m.modifier || 'straight') : m.type;
+    const t = TURNS[key] || TURNS[m.type] || ['➜', 'Der Route folgen'];
+    if (arrow) arrow.textContent = t[0];
+    text.textContent = (bestD < 900 ? 'in ' + Math.round(bestD / 10) * 10 + ' m: ' : '') + t[1] + (best.name ? ' – ' + best.name : '');
+  }
+
+  function drawRoute() {
+    if (typeof mapObj === 'undefined' || !mapObj || typeof L === 'undefined') return;
+    if (routeLine) { mapObj.removeLayer(routeLine); routeLine = null; }
+    if (routePts.length) {
+      routeLine = L.polyline(routePts, { color: '#3B82F6', weight: 5, opacity: .85, dashArray: '1 8', lineCap: 'round' }).addTo(mapObj);
+    }
+    if (target) {
+      if (destMarker) mapObj.removeLayer(destMarker);
+      destMarker = L.circleMarker([target.lat, target.lon], { radius: 8, color: '#fff', weight: 2, fillColor: '#C23C31', fillOpacity: 1 })
+        .addTo(mapObj).bindTooltip(target.name);
+    }
+  }
+
+  /* ---------------- Hintergrund / Pille ---------------- */
+  window.navMinimize = function () {
+    document.getElementById('ridemode').classList.remove('open');
+    document.getElementById('navPill').classList.add('open');
+  };
+  window.navMaximize = function () {
+    document.getElementById('navPill').classList.remove('open');
+    document.getElementById('ridemode').classList.add('open');
+  };
+
+  function navEnd() {
+    hidePanel();
+    target = null; toGoKm = null; routePts = []; baseRange = null;
+    const pill = document.getElementById('navPill');
+    if (pill) pill.classList.remove('open');
+    if (routeLine && typeof mapObj !== 'undefined' && mapObj) { mapObj.removeLayer(routeLine); routeLine = null; }
+    if (destMarker && typeof mapObj !== 'undefined' && mapObj) { mapObj.removeLayer(destMarker); destMarker = null; }
+  }
+
+  /* ---------------- Anbindung an die bestehenden Funktionen ---------------- */
+  const origStop = window.stopRide;
+  window.stopRide = async function () {
+    const r = await origStop.apply(this, arguments);
+    navEnd();
+    return r;
+  };
+
+  const origStart = window.startRide;
+  window.startRide = function () {
+    const r = origStart.apply(this, arguments);
+    if (!target) hidePanel();          // Fahrt ohne Ziel: Panel bleibt aus
+    document.getElementById('navPill').classList.remove('open');
+    return r;
+  };
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && target) { tick(); routeNow(true); }
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', renderTiles);
+  } else renderTiles();
+
+})();
+
 </script>
 </body>
 </html>
